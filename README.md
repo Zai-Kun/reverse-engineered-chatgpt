@@ -59,4 +59,9 @@ Remember to replace session_token in `ChatGPT(session_token="__Secure-next-auth.
 4. Copy the value for `__Secure-next-auth.session-token` and save it.
 
 ## Bugs report/contact me.
+
 Join my discord server: https://discord.gg/ymcqxudVJG
+
+## Acknowledgments
+
+This project would not have been possible without [curl_cffi](https://github.com/yifeikong/curl_cffi).
