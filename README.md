@@ -44,6 +44,8 @@ async def main():
                 last_message = message
             print("\n")
 
+        # await chatgpt.delete_conversation("random_string") # you can delete a convo with this
+
 if __name__ == "__main__":
     asyncio.run(main())
 ```
