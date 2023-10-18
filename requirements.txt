@@ -1,1 +1,2 @@
 cryptography
+curl_cffi
