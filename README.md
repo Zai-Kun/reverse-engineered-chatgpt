@@ -58,6 +58,11 @@ Remember to replace session_token in `ChatGPT(session_token="__Secure-next-auth.
 3. Go to the `Application` tab and open the `Cookies` section.
 4. Copy the value for `__Secure-next-auth.session-token` and save it.
 
+## TODO
+- [ ] Add better error handling.
+- [ ] Implement a function to retrieve all ChatGPT chats.
+- [ ] Improve documentation.
+
 ## Bugs report/contact me.
 
 Join my discord server: https://discord.gg/ymcqxudVJG
