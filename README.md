@@ -2,6 +2,10 @@
 
 ChatGPT web version in Python. Basically, you can use the ChatGPT API for free without any limitations, just as in the web version.
 
+## Important!!
+
+It appears that OpenAI has made changes to ChatGPT's API, causing this reverse-engineered API to no longer function (Well, at least me if not anyone else.). I am currently working on reverse-engineering their new API, and I hope to make it functional again.
+
 ## How to use it in your projects
 
 Clone the repo and just copy and paste the 're_chatgpt' directory into your projects where you want to use it.
