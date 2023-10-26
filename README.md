@@ -1,6 +1,12 @@
-# Reverse-engineered ChatGPT
+# Reverse-engineered ChatGPT (Status: Working)
 
 ChatGPT web version in Python. Basically, you can use the ChatGPT API for free without any limitations, just as in the web version.
+
+## Important!!
+
+OpenAI's ChatGPT now requires the use of an Arkose token, which serves as a CAPTCHA token. This API can generate that token, but please note that the token may not work every time. Thus, the API may occasionally produce unexpected errors. Based on my experience, the success rate is 100%.
+
+If you have any suggestions on how to fix this issue, please open an issue.
 
 ## How to use it in your projects
 
@@ -9,17 +15,20 @@ Clone the repo and just copy and paste the 're_chatgpt' directory into your proj
 ## Example usage
 
 ```python
-import sys, asyncio
+import asyncio
+import sys
+
 from re_gpt import ChatGPT
 
 # colors
-GREEN = '\033[92m'
-YELLOW = '\033[93m'
-RESET = '\033[0m'
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+RESET = "\033[0m"
 
 # it will not work on windows without this
 if sys.version_info >= (3, 8) and sys.platform.lower().startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 
 def print_chat(chat):
     for key, message in chat.get("mapping", {}).items():
@@ -28,13 +37,19 @@ def print_chat(chat):
             content = message["message"]["content"]["parts"][0]
             print(f"{GREEN if role == 'user' else YELLOW}{role}: {RESET}{content}\n")
 
+
 async def main():
-    async with ChatGPT(session_token="__Secure-next-auth.session-token here") as chatgpt:
+    async with ChatGPT(
+        session_token="__Secure-next-auth.session-token here",
+        secure_data_path=".data",  # data file path
+    ) as chatgpt:
         print_chat(await chatgpt.fetch_chat("random_string"))
-        
+
         while True:
             user_input = input(f"{GREEN}user: {RESET}")
-            reply = chatgpt.chat("random_string", user_input) # random string that will be assigned to the actual conversation id
+            reply = chatgpt.chat(
+                "random_string", user_input
+            )  # random string that will be assigned to the actual conversation id
 
             last_message = ""
             print()
@@ -45,6 +60,7 @@ async def main():
             print("\n")
 
         # await chatgpt.delete_conversation("random_string") # you can delete a convo with this
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,2 +1,4 @@
 cryptography
 curl_cffi
+mmh3
+pycryptodome
