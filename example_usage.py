@@ -24,7 +24,7 @@ def print_chat(chat):
 async def main():
     async with ChatGPT(
         session_token="__Secure-next-auth.session-token here",
-        secure_data_path=".data",  # data file path
+        secure_data_path="./data",  # data file path
     ) as chatgpt:
         print_chat(await chatgpt.fetch_chat("random_string"))
 
