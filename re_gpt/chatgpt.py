@@ -238,7 +238,7 @@ class ChatGPT:
         }
 
         args_for_request = get_values_for_request(opt)
-        response = await self.session.get(**args_for_request)
+        response = await self.session.post(**args_for_request)
         decoded_json = response.json()
         if "token" in decoded_json:
             return decoded_json["token"]
