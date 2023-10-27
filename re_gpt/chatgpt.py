@@ -241,7 +241,7 @@ class ChatGPT:
         response = await self.session.get(**args_for_request)
         decoded_json = response.json()
         if "token" in decoded_json:
-            return response.json()["token"]
+            return decoded_json["token"]
 
         raise MissingArkoseTokenError(decoded_json)
 
