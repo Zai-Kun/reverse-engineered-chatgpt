@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import sys
 import uuid
 
 from curl_cffi.requests import AsyncSession
@@ -74,11 +75,13 @@ class ChatGPT:
         try:
             self.conversations[user_id]["free"] = False
             full_message = ""
+            server_response = ""  # To store what the server returned for debugging in case of an error
 
             while True:
                 response = self.send_message(payload=payload)
                 async for chunk in response:
                     decoded_chunk = chunk.decode()
+                    server_response += decoded_chunk
                     for line in decoded_chunk.splitlines():
                         if not line.startswith("data: "):
                             continue
@@ -105,8 +108,12 @@ class ChatGPT:
                     )
                 else:
                     break
-        finally:
-            self.conversations[user_id]["free"] = True
+        except Exception as e:
+            print("An unexpected error occurred.")
+            print(f"Error message: {e}")
+            print(f"This is what the server returned: {server_response}")
+
+            sys.exit(1)
 
         self.conversations[user_id]["conversation_id"] = full_message["conversation_id"]
         self.conversations[user_id]["parent_id"] = full_message["message"]["id"]
