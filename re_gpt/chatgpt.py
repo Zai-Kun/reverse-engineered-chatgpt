@@ -81,6 +81,7 @@ class ChatGPT:
                 response = self.send_message(payload=payload)
                 async for chunk in response:
                     decoded_chunk = chunk.decode()
+
                     server_response += decoded_chunk
                     for line in decoded_chunk.splitlines():
                         if not line.startswith("data: "):
@@ -115,6 +116,7 @@ class ChatGPT:
 
             sys.exit(1)
 
+        self.conversations[user_id]["free"] = True
         self.conversations[user_id]["conversation_id"] = full_message["conversation_id"]
         self.conversations[user_id]["parent_id"] = full_message["message"]["id"]
         self.save_conversations()
