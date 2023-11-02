@@ -1,4 +1,4 @@
-# Reverse-engineered ChatGPT (Status: Not working (Working on it))
+# Reverse-engineered ChatGPT (Status: Working (It somehow started working again, IDK how))
 
 ChatGPT web version in Python. Basically, you can use the ChatGPT API for free without any limitations, just as in the web version.
 
