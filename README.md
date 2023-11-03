@@ -1,4 +1,4 @@
-# Reverse-engineered ChatGPT (Status: Not working for now)
+# Reverse-engineered ChatGPT (Status: Working)
 
 ChatGPT web version in Python. Basically, you can use the ChatGPT API for free without any limitations, just as in the web version.
 
@@ -85,4 +85,4 @@ Join my discord server: https://discord.gg/ymcqxudVJG
 
 ## Acknowledgments
 
-This project would not have been possible without [curl_cffi](https://github.com/yifeikong/curl_cffi).
+This project would not have been possible without [curl_cffi](https://github.com/yifeikong/curl_cffi) and [funcaptcha](https://github.com/acheong08/funcaptcha).
