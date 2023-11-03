@@ -7,14 +7,13 @@ import uuid
 from curl_cffi.requests import AsyncSession
 
 from .encryption_manager import EncryptionManager
-from .errors import InvalidSessionToken, MissingArkoseTokenError, TokenNotProvided
-from .py_arkose_generator.arkose import get_values_for_request
+from .errors import BackendError, InvalidSessionToken, RetryError, TokenNotProvided
 
 
 class ChatGPT:
-    API = "https://chat.openai.com/backend-api/{}"
     USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
-    PKEY = "3D86FBBA-9D22-402A-B512-3420086BA6CC"
+    CHATGPT_API = "https://chat.openai.com/backend-api/{}"
+    ARKOSE_TOKEN_GENERATOR_URL = "https://arkose-token-generator.zaieem.repl.co/token"  # This Repl generates Arkose tokens using 'github.com/acheong08/funcaptcha'
 
     def __init__(
         self, session_token=None, secure_data_key=None, secure_data_path="./data"
@@ -48,7 +47,7 @@ class ChatGPT:
             else:
                 return {}
 
-        url = self.API.format(f"conversation/{conversation_id}")
+        url = self.CHATGPT_API.format(f"conversation/{conversation_id}")
         response = await self.session.get(url=url, headers=self.build_request_headers())
 
         return response.json()
@@ -128,7 +127,7 @@ class ChatGPT:
             def content_callback(chunk):
                 response_queue.put_nowait(chunk)
 
-            url = self.API.format("conversation")
+            url = self.CHATGPT_API.format("conversation")
             response = await self.session.post(
                 url=url,
                 headers=self.build_request_headers(),
@@ -154,7 +153,7 @@ class ChatGPT:
             return
 
         conversation_id = self.conversations[user_id]["conversation_id"]
-        url = self.API.format(f"conversation/{conversation_id}")
+        url = self.CHATGPT_API.format(f"conversation/{conversation_id}")
 
         response = await self.session.patch(
             url=url, headers=self.build_request_headers(), json={"is_visible": False}
@@ -239,20 +238,15 @@ class ChatGPT:
         return payload
 
     async def arkose_token_generator(self):
-        opt = {
-            "pkey": self.PKEY,
-            "surl": "https://tcr9i.chat.openai.com",
-            "headers": {"User-Agent": self.USER_AGENT},
-            "site": "https://chat.openai.com",
-        }
-
-        args_for_request = get_values_for_request(opt)
-        response = await self.session.post(**args_for_request)
-        decoded_json = response.json()
-        if "token" in decoded_json:
-            return decoded_json["token"]
-
-        raise MissingArkoseTokenError(decoded_json)
+        for _ in range(3):
+            response = await self.session.get(self.ARKOSE_TOKEN_GENERATOR_URL)
+            if response.text == "null":
+                raise BackendError(error_code=505)
+            try:
+                return response.json()["token"]
+            except:
+                await asyncio.sleep(0.5)
+        raise RetryError(website=self.ARKOSE_TOKEN_GENERATOR_URL)
 
     def update_cookies(self, new_cookies):
         data = self.encryption_manager.read_and_decrypt()
