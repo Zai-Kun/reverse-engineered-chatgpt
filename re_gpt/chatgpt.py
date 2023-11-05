@@ -246,8 +246,11 @@ class ChatGPT:
 
     async def arkose_token_generator(self):  # needs error handeling
         if self.binary_path:
-            result = self.arkose.GetToken()
-            return ctypes.string_at(result).decode("utf-8")
+            try:
+                result = self.arkose.GetToken()
+                return ctypes.string_at(result).decode("utf-8")
+            except:
+                pass
 
         for _ in range(5):
             response = await self.session.get(self.BACKUP_ARKOSE_TOKEN_GENERATOR)
