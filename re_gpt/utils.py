@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import os
 import platform
@@ -27,25 +26,11 @@ def calculate_file_md5(file_path):
         return md5_hash
 
 
-async def download_updated_binary(session, output_path, file_url):
-    response_queue = asyncio.Queue()
-
-    async def make_request():
-        def content_handler(chunk):
-            response_queue.put_nowait(chunk)
-
-        response = await session.get(url=file_url, content_callback=content_handler)
-        await response_queue.put(None)
-
-    stream_task = asyncio.create_task(make_request())
-
+async def download_binary(session, output_path, file_url):
     with open(output_path, "wb") as output_file:
-        while True:
-            chunk = await response_queue.get()
-            if chunk is None:
-                break
-
-            output_file.write(chunk)
+        response = await session.get(
+            url=file_url, content_callback=lambda chunk: output_file.write(chunk)
+        )
 
 
 async def get_binary_path(session):
@@ -74,7 +59,7 @@ async def get_binary_path(session):
                 if asset["name"] == binary_file_name
             ][0]["browser_download_url"]
 
-            await download_updated_binary(session, binary_path, file_url)
+            await download_binary(session, binary_path, file_url)
     else:
         response = await session.get(latest_release_url)
         json_data = response.json()
@@ -83,6 +68,6 @@ async def get_binary_path(session):
             asset for asset in json_data["assets"] if asset["name"] == binary_file_name
         ][0]["browser_download_url"]
 
-        await download_updated_binary(session, binary_path, file_url)
+        await download_binary(session, binary_path, file_url)
 
     return binary_path
