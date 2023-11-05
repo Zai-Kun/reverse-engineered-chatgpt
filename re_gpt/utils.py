@@ -3,7 +3,10 @@ import os
 import platform
 
 current_os = platform.system()
-current_file_directory = "/".join(__file__.split("/")[:-1])
+current_file_directory = "/".join(
+    __file__.split("\\" if current_os == "Windows" else "/")[0:-1]
+)
+
 funcaptcha_bin_folder_path = f"{current_file_directory}/funcaptcha_bin"
 latest_release_url = (
     "https://api.github.com/repos/Zai-Kun/reverse-engineered-chatgpt/releases/latest"
