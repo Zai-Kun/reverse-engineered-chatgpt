@@ -1,7 +1,12 @@
 import asyncio
+import configparser
 import sys
 
 from re_gpt import ChatGPT
+
+config = configparser.ConfigParser()
+config.read("config.ini")
+session = config["session"]
 
 # colors
 GREEN = "\033[92m"
@@ -23,8 +28,10 @@ def print_chat(chat):
 
 async def main():
     async with ChatGPT(
-        session_token="__Secure-next-auth.session-token here",
-        secure_data_path="./data",  # file path for storing essential information (e.g., cookies, auth token)
+        session_token=session["token"],
+        secure_data_path=session[
+            "data_path"
+        ],  # file path for storing essential information (e.g., cookies, auth token)
     ) as chatgpt:
         print_chat(await chatgpt.fetch_chat("random_string"))
 
