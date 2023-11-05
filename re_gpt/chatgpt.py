@@ -1,4 +1,5 @@
 import asyncio
+import ctypes
 import json
 import os
 import sys
@@ -8,12 +9,13 @@ from curl_cffi.requests import AsyncSession
 
 from .encryption_manager import EncryptionManager
 from .errors import BackendError, InvalidSessionToken, RetryError, TokenNotProvided
+from .utils import get_binary_path
 
 
 class ChatGPT:
     USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
     CHATGPT_API = "https://chat.openai.com/backend-api/{}"
-    ARKOSE_TOKEN_GENERATOR_URL = "https://arkose-token-generator.zaieem.repl.co/token"  # This Repl generates Arkose tokens using 'github.com/acheong08/funcaptcha'
+    BACKUP_ARKOSE_TOKEN_GENERATOR = "https://arkose-token-generator.zaieem.repl.co/token"  # This Repl generates Arkose tokens using 'github.com/acheong08/funcaptcha'
 
     def __init__(
         self, session_token=None, secure_data_key=None, secure_data_path="./data"
@@ -27,6 +29,11 @@ class ChatGPT:
 
     async def __aenter__(self):
         self.session = AsyncSession(impersonate="chrome110", timeout=99999)
+        self.binary_path = await get_binary_path(self.session)
+
+        if self.binary_path:
+            self.arkose = ctypes.CDLL(self.binary_path)
+            self.arkose.GetToken.restype = ctypes.c_char_p
 
         if "auth_token" not in self.encryption_manager.read_and_decrypt():
             if self.session_token is None:
@@ -237,16 +244,24 @@ class ChatGPT:
 
         return payload
 
-    async def arkose_token_generator(self):
-        for _ in range(3):
-            response = await self.session.get(self.ARKOSE_TOKEN_GENERATOR_URL)
+    async def arkose_token_generator(self):  # needs error handeling
+        if self.binary_path:
+            try:
+                result = self.arkose.GetToken()
+                return ctypes.string_at(result).decode("utf-8")
+            except:
+                pass
+
+        for _ in range(5):
+            response = await self.session.get(self.BACKUP_ARKOSE_TOKEN_GENERATOR)
             if response.text == "null":
                 raise BackendError(error_code=505)
             try:
                 return response.json()["token"]
             except:
-                await asyncio.sleep(0.5)
-        raise RetryError(website=self.ARKOSE_TOKEN_GENERATOR_URL)
+                await asyncio.sleep(0.7)
+
+        raise RetryError(website=self.BACKUP_ARKOSE_TOKEN_GENERATOR)
 
     def update_cookies(self, new_cookies):
         data = self.encryption_manager.read_and_decrypt()
