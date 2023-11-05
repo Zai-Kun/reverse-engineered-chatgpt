@@ -193,7 +193,7 @@ if __name__ == "__main__":
 
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions are what makes the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
 If you have a suggestion that would make this better, please fork the repo and create a pull request.
 Don't forget to give the project a star! Thanks again!
@@ -221,11 +221,9 @@ Repo Link: <https://github.com/Zai-Kun/reverse-engineered-chatgpt>
 
 * [yifeikong (curl-cffi module)](https://github.com/yifeikong/curl_cffi)
 
-* [acheong08 (implementation to obtain arkose_token)](ht tps://github.com/acheong08/funcaptcha)
+* [acheong08 (implementation to obtain arkose_token)](https://github.com/acheong08/funcaptcha)
 
 * [pyca (cryptography module)](https://github.com/pyca/cryptography/)
-
-* [hajimes (mmh3 module)](https://github.com/hajimes/mmh3)
 
 * [Legrandin (pycryptodome module)](https://github.com/Legrandin/pycryptodome/)
 
