@@ -113,6 +113,14 @@ ChatGPT has an official API which can be used to interface your Python code to i
     pip install -r ../reverse-engineered-chatgpt/requirements.txt
     ```
 
+6. Copy `sampleconfig.ini` from `reverse-engineered-chatgpt` directory to your project's directory and rename it to `config.ini`
+
+    ```sh
+    cp ../reverse-engineered-chatgpt/sampleconfig.ini config.ini
+    ```
+
+7. Replace `__Secure-next-auth.session-token` in `config.ini` with your [Session token](#obtaining-session-token) (remove the quotes)
+
 ### Obtaining Session Token
 
 1. Go to <https://chat.openai.com/chat> and log in or sign up.
@@ -120,7 +128,13 @@ ChatGPT has an official API which can be used to interface your Python code to i
 3. Go to the `Application` tab and open the `Cookies` section.
 4. Copy the value for `__Secure-next-auth.session-token` and save it.
 
+## Usage
+
+See the [examples](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/examples) folder for a few example codes to understand this project
+
 ### Example usage
+
+#### [chatgpt_demo.py](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/examples/chatgpt_demo.py)
 
 ```python
 import asyncio
@@ -153,7 +167,7 @@ def print_chat(chat):
 
 async def main():
     async with ChatGPT(
-        session_token=session["token"], # your '__Secure-next-auth.session-token' token
+        session_token=session["token"],  # your '__Secure-next-auth.session-token' token
         secure_data_path=session[
             "data_path"
         ],  # file path for storing essential information (e.g., cookies, auth token)
@@ -183,9 +197,10 @@ if __name__ == "__main__":
 
 ## Roadmap
 
-* [ ] Add better error handling.
-* [ ] Implement a function to retrieve all ChatGPT chats.
-* [ ] Improve documentation.
+* [ ] Add more examples
+* [ ] Add better error handling
+* [ ] Implement a function to retrieve all ChatGPT chats
+* [ ] Improve documentation
 
 ## Contributing
 

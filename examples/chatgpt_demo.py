@@ -28,7 +28,7 @@ def print_chat(chat):
 
 async def main():
     async with ChatGPT(
-        session_token=session["token"], # your '__Secure-next-auth.session-token' token
+        session_token=session["token"],  # your '__Secure-next-auth.session-token' token
         secure_data_path=session[
             "data_path"
         ],  # file path for storing essential information (e.g., cookies, auth token)
