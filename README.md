@@ -113,6 +113,14 @@ ChatGPT has an official API which can be used to interface your Python code to i
     pip install -r ../reverse-engineered-chatgpt/requirements.txt
     ```
 
+6. Copy `sampleconfig.ini` from `reverse-engineered-chatgpt` directory to your project's directory and rename it to `config.ini`
+
+    ```sh
+    cp ../reverse-engineered-chatgpt/sampleconfig.ini config.ini
+    ```
+
+7. Replace `__Secure-next-auth.session-token` in `config.ini` with your [Session token](#obtaining-session-token) (remove the quotes)
+
 ### Obtaining Session Token
 
 1. Go to <https://chat.openai.com/chat> and log in or sign up.
@@ -183,9 +191,10 @@ if __name__ == "__main__":
 
 ## Roadmap
 
-* [ ] Add better error handling.
-* [ ] Implement a function to retrieve all ChatGPT chats.
-* [ ] Improve documentation.
+* [ ] Add more examples
+* [ ] Add better error handling
+* [ ] Implement a function to retrieve all ChatGPT chats
+* [ ] Improve documentation
 
 ## Contributing
 
