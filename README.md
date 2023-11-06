@@ -128,7 +128,13 @@ ChatGPT has an official API which can be used to interface your Python code to i
 3. Go to the `Application` tab and open the `Cookies` section.
 4. Copy the value for `__Secure-next-auth.session-token` and save it.
 
+## Usage
+
+See the [examples](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/examples) folder for a few example codes to understand this project
+
 ### Example usage
+
+#### [chatgpt_demo.py](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/examples/chatgpt_demo.py)
 
 ```python
 import asyncio
@@ -161,7 +167,7 @@ def print_chat(chat):
 
 async def main():
     async with ChatGPT(
-        session_token=session["token"], # your '__Secure-next-auth.session-token' token
+        session_token=session["token"],  # your '__Secure-next-auth.session-token' token
         secure_data_path=session[
             "data_path"
         ],  # file path for storing essential information (e.g., cookies, auth token)
