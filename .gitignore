@@ -164,3 +164,4 @@ funcaptcha_bin
 .vscode
 test/
 config.ini
+test.py
