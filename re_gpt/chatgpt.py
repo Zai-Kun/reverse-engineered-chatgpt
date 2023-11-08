@@ -1,5 +1,6 @@
 import asyncio
 import ctypes
+import inspect
 import json
 import os
 import sys
@@ -18,8 +19,15 @@ class ChatGPT:
     BACKUP_ARKOSE_TOKEN_GENERATOR = "https://arkose-token-generator.zaieem.repl.co/token"  # This Repl generates Arkose tokens using 'github.com/acheong08/funcaptcha'
 
     def __init__(
-        self, session_token=None, secure_data_key=None, secure_data_path="./data"
+        self,
+        proxies=None,
+        session_token=None,
+        secure_data_key=None,
+        secure_data_path="./data",
+        exit_callback_function=None,
     ):
+        self.proxies = proxies
+        self.exit_callback_function = exit_callback_function
         self.encryption_manager = EncryptionManager(
             secure_data_key=secure_data_key, secure_data_path=secure_data_path
         )
@@ -28,7 +36,9 @@ class ChatGPT:
         self.session = None
 
     async def __aenter__(self):
-        self.session = AsyncSession(impersonate="chrome110", timeout=99999)
+        self.session = AsyncSession(
+            impersonate="chrome110", timeout=99999, proxies=self.proxies
+        )
         self.binary_path = await get_binary_path(self.session)
 
         if self.binary_path:
@@ -43,7 +53,12 @@ class ChatGPT:
         return self
 
     async def __aexit__(self, *args):
-        self.session.close()
+        try:
+            if self.exit_callback_function and callable(self.exit_callback_function):
+                if not inspect.iscoroutinefunction(self.exit_callback_function):
+                    self.exit_callback_function(self)
+        finally:
+            self.session.close()
 
     async def fetch_chat(
         self, user_id=None, conversation_id=None

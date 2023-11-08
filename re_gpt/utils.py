@@ -46,9 +46,12 @@ async def get_binary_path(session):
         os.mkdir(funcaptcha_bin_folder_path)
 
     if os.path.isfile(binary_path):
-        local_binary_hash = calculate_file_md5(binary_path)
-        response = await session.get(latest_release_url)
-        json_data = response.json()
+        try:
+            local_binary_hash = calculate_file_md5(binary_path)
+            response = await session.get(latest_release_url)
+            json_data = response.json()
+        except:
+            return binary_path
 
         for line in json_data["body"].splitlines():
             if line.startswith(current_os):

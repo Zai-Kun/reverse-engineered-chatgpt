@@ -2,6 +2,7 @@ import asyncio
 import configparser
 import sys
 
+import requests
 from re_gpt import ChatGPT
 
 config = configparser.ConfigParser()
@@ -26,8 +27,14 @@ def print_chat(chat):
             print(f"{GREEN if role == 'user' else YELLOW}{role}: {RESET}{content}\n")
 
 
+def exit_callback(self):
+    pass  # do something here on exit
+
+
 async def main():
     async with ChatGPT(
+        proxies=None,  # optional
+        exit_callback_function=exit_callback,  # optional
         session_token=session["token"],  # your '__Secure-next-auth.session-token' token
         secure_data_path=session[
             "data_path"
