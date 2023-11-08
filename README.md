@@ -134,7 +134,7 @@ See the [examples](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/ma
 
 ## Roadmap
 
-* [ ] Add more examples
+* [x] Add more examples
 * [ ] Add better error handling
 * [ ] Implement a function to retrieve all ChatGPT chats
 * [ ] Improve documentation
