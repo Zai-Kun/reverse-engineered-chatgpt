@@ -82,44 +82,19 @@ ChatGPT has an official API which can be used to interface your Python code to i
 
 ### Installation
 
-1. Clone the repo
+1. Clone the repository:
 
    ```sh
-   git clone https://github.com/Zai-Kun/reverse-engineered-chatgpt.git
+   git clone https://github.com/Zai-Kun/reverse-engineered-chatgpt
    ```
 
-2. Copy the `re_chatgpt` directory into into your project directory.
-
-   ```sh
-   cp -r reverse-engineered-chatgpt/re_chatgpt <your_project_directory>
-   ```
-
-3. Create a Python virtual environment in your project's directory
+2. Install the necessary pip packages:
 
     ```sh
-    cd <your_project_directory>
-    python -m venv .venv
+    pip install -r reverse-engineered-chatgpt/requirements.txt
     ```
 
-4. Activate the virtual environment
-
-    ```sh
-    source .venv/bin/activate
-    ```
-
-5. Install the pip packages from `requirements.txt` of `reverse-engineered-chatgpt` directory in your project directory's environment
-
-    ```sh
-    pip install -r ../reverse-engineered-chatgpt/requirements.txt
-    ```
-
-6. Copy `sampleconfig.ini` from `reverse-engineered-chatgpt` directory to your project's directory and rename it to `config.ini`
-
-    ```sh
-    cp ../reverse-engineered-chatgpt/sampleconfig.ini config.ini
-    ```
-
-7. Replace `__Secure-next-auth.session-token` in `config.ini` with your [Session token](#obtaining-session-token) (remove the quotes)
+3. Copy the `re_gpt` directory into your project directory. To do this, copy the `re_gpt` folder from the `reverse-engineered-chatgpt` directory and paste it into your project folder.
 
 ### Obtaining Session Token
 
