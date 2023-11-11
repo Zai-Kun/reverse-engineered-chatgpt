@@ -82,19 +82,9 @@ ChatGPT has an official API which can be used to interface your Python code to i
 
 ### Installation
 
-1. Clone the repository:
-
-   ```sh
-   git clone https://github.com/Zai-Kun/reverse-engineered-chatgpt
-   ```
-
-2. Install the necessary pip packages:
-
-    ```sh
-    pip install -r reverse-engineered-chatgpt/requirements.txt
-    ```
-
-3. Copy the `re_gpt` directory into your project directory. To do this, copy the `re_gpt` folder from the `reverse-engineered-chatgpt` directory and paste it into your project folder.
+```sh
+pip install git+https://github.com/Zai-Kun/reverse-engineered-chatgpt.git
+```
 
 ### Obtaining Session Token
 
