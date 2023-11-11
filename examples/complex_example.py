@@ -2,7 +2,6 @@ import asyncio
 import configparser
 import sys
 
-import requests
 from re_gpt import ChatGPT
 
 config = configparser.ConfigParser()
