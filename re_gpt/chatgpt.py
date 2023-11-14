@@ -12,12 +12,13 @@ from .encryption_manager import EncryptionManager
 from .errors import BackendError, InvalidSessionToken, RetryError, TokenNotProvided
 from .utils import get_binary_path
 
+# consts
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+CHATGPT_API = "https://chat.openai.com/backend-api/{}"
+BACKUP_ARKOSE_TOKEN_GENERATOR = "https://arkose-token-generator.zaieem.repl.co/token"  # This Repl generates Arkose tokens using 'github.com/acheong08/funcaptcha'
+
 
 class ChatGPT:
-    USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
-    CHATGPT_API = "https://chat.openai.com/backend-api/{}"
-    BACKUP_ARKOSE_TOKEN_GENERATOR = "https://arkose-token-generator.zaieem.repl.co/token"  # This Repl generates Arkose tokens using 'github.com/acheong08/funcaptcha'
-
     def __init__(
         self,
         proxies=None,
@@ -69,7 +70,7 @@ class ChatGPT:
             else:
                 return {}
 
-        url = self.CHATGPT_API.format(f"conversation/{conversation_id}")
+        url = CHATGPT_API.format(f"conversation/{conversation_id}")
         response = await self.session.get(url=url, headers=self.build_request_headers())
 
         return response.json()
@@ -149,7 +150,7 @@ class ChatGPT:
             def content_callback(chunk):
                 response_queue.put_nowait(chunk)
 
-            url = self.CHATGPT_API.format("conversation")
+            url = CHATGPT_API.format("conversation")
             response = await self.session.post(
                 url=url,
                 headers=self.build_request_headers(),
@@ -171,7 +172,7 @@ class ChatGPT:
             return
 
         conversation_id = self.conversations[user_id]["conversation_id"]
-        url = self.CHATGPT_API.format(f"conversation/{conversation_id}")
+        url = CHATGPT_API.format(f"conversation/{conversation_id}")
 
         response = await self.session.patch(
             url=url, headers=self.build_request_headers(), json={"is_visible": False}
@@ -185,7 +186,7 @@ class ChatGPT:
         cookies = {"__Secure-next-auth.session-token": session_token}
 
         headers = {
-            "User-Agent": self.USER_AGENT,
+            "User-Agent": USER_AGENT,
             "Accept": "*/*",
             "Accept-Language": "en-US,en;q=0.5",
             "Alt-Used": "chat.openai.com",
@@ -259,7 +260,7 @@ class ChatGPT:
                 pass
 
         for _ in range(5):
-            response = await self.session.get(self.BACKUP_ARKOSE_TOKEN_GENERATOR)
+            response = await self.session.get(BACKUP_ARKOSE_TOKEN_GENERATOR)
             if response.text == "null":
                 raise BackendError(error_code=505)
             try:
@@ -267,7 +268,7 @@ class ChatGPT:
             except:
                 await asyncio.sleep(0.7)
 
-        raise RetryError(website=self.BACKUP_ARKOSE_TOKEN_GENERATOR)
+        raise RetryError(website=BACKUP_ARKOSE_TOKEN_GENERATOR)
 
     def save_conversations(self):
         data = self.encryption_manager.read_and_decrypt()
@@ -293,7 +294,7 @@ class ChatGPT:
 
     def build_request_headers(self):
         headers = {
-            "User-Agent": self.USER_AGENT,
+            "User-Agent": USER_AGENT,
             "Accept": "text/event-stream",
             "Accept-Language": "en-US",
             "Accept-Encoding": "gzip, deflate, br",
