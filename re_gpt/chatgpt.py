@@ -226,6 +226,7 @@ class ChatGPT:
         self, user_input, parent_id=None, conversation_id=None, new_chat=True
     ):
         payload = {
+            "conversation_mode": {"conversation_mode": {"kind": "primary_assistant"}},
             "conversation_id": None if new_chat else conversation_id,
             "action": "next",
             "arkose_token": await self.arkose_token_generator(),
@@ -247,6 +248,7 @@ class ChatGPT:
 
     async def build_message_continuation_payload(self, conversation_id, parent_id):
         payload = {
+            "conversation_mode": {"conversation_mode": {"kind": "primary_assistant"}},
             "action": "continue",
             "arkose_token": await self.arkose_token_generator(),
             "conversation_id": conversation_id,
