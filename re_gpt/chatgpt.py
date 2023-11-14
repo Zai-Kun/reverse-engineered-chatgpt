@@ -158,10 +158,6 @@ class ChatGPT:
             )
             await response_queue.put(None)
 
-            if "Set-Cookie" in response.headers:
-                new_cookies = {key: value for key, value in response.cookies.items()}
-                self.update_cookies(new_cookies)
-
         stream_task = asyncio.create_task(perform_request())
 
         while True:
@@ -180,10 +176,6 @@ class ChatGPT:
         response = await self.session.patch(
             url=url, headers=self.build_request_headers(), json={"is_visible": False}
         )
-
-        if "Set-Cookie" in response.headers:
-            new_cookies = {key: value for key, value in response.cookies.items()}
-            self.update_cookies(new_cookies)
 
         del self.conversations[user_id]
         self.save_conversations()
@@ -211,9 +203,6 @@ class ChatGPT:
         }
 
         response = await self.session.get(url=url, headers=headers)
-        if "Set-Cookie" in response.headers:
-            new_cookies = {key: value for key, value in response.cookies.items()}
-            self.update_cookies(new_cookies)
         response_json = response.json()
 
         if "accessToken" in response_json:
@@ -280,14 +269,6 @@ class ChatGPT:
 
         raise RetryError(website=self.BACKUP_ARKOSE_TOKEN_GENERATOR)
 
-    def update_cookies(self, new_cookies):
-        data = self.encryption_manager.read_and_decrypt()
-        if "cookies" not in data:
-            data["cookies"] = new_cookies
-        else:
-            data["cookies"].update(new_cookies)
-        self.encryption_manager.encrypt_and_save(data)
-
     def save_conversations(self):
         data = self.encryption_manager.read_and_decrypt()
         data["conversations"] = self.conversations
@@ -310,12 +291,7 @@ class ChatGPT:
     def get_auth_token(self):
         return self.encryption_manager.read_and_decrypt()["auth_token"]
 
-    def get_cookies(self):
-        return self.encryption_manager.read_and_decrypt()["cookies"]
-
     def build_request_headers(self):
-        cookies = self.get_cookies()
-
         headers = {
             "User-Agent": self.USER_AGENT,
             "Accept": "text/event-stream",
@@ -326,12 +302,6 @@ class ChatGPT:
             "Origin": "https://chat.openai.com",
             "Alt-Used": "chat.openai.com",
             "Connection": "keep-alive",
-            "Cookie": "; ".join(
-                [
-                    f"{cookie_key}={cookie_value}"
-                    for cookie_key, cookie_value in cookies.items()
-                ]
-            ),
         }
 
         return headers
