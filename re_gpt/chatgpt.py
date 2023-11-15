@@ -5,34 +5,41 @@ import json
 import os
 import sys
 import uuid
+from typing import AsyncGenerator, Callable, Optional
 
 from curl_cffi.requests import AsyncSession
 
-from .encryption_manager import EncryptionManager
 from .errors import BackendError, InvalidSessionToken, RetryError, TokenNotProvided
 from .utils import get_binary_path
 
+# Constants
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+CHATGPT_API = "https://chat.openai.com/backend-api/{}"
+BACKUP_ARKOSE_TOKEN_GENERATOR = "https://arkose-token-generator.zaieem.repl.co/token"
+
 
 class ChatGPT:
-    USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
-    CHATGPT_API = "https://chat.openai.com/backend-api/{}"
-    BACKUP_ARKOSE_TOKEN_GENERATOR = "https://arkose-token-generator.zaieem.repl.co/token"  # This Repl generates Arkose tokens using 'github.com/acheong08/funcaptcha'
-
     def __init__(
         self,
-        proxies=None,
-        session_token=None,
-        secure_data_key=None,
-        secure_data_path="./data",
-        exit_callback_function=None,
+        proxies: Optional[dict] = None,
+        session_token: Optional[str] = None,
+        exit_callback_function: Optional[Callable] = None,
+        auth_token: Optional[str] = None,
     ):
+        """
+        Initializes an instance of the class.
+
+        Args:
+            proxies (Optional[dict]): A dictionary of proxy settings. Defaults to None.
+            session_token (Optional[str]): A session token. Defaults to None.
+            exit_callback_function (Optional[callable]): A function to be called on exit. Defaults to None.
+            auth_token (Optional[str]): An authentication token. Defaults to None.
+        """
         self.proxies = proxies
         self.exit_callback_function = exit_callback_function
-        self.encryption_manager = EncryptionManager(
-            secure_data_key=secure_data_key, secure_data_path=secure_data_path
-        )
-        self.conversations = self.get_conversations()
+
         self.session_token = session_token
+        self.auth_token = auth_token
         self.session = None
 
     async def __aenter__(self):
@@ -45,10 +52,10 @@ class ChatGPT:
             self.arkose = ctypes.CDLL(self.binary_path)
             self.arkose.GetToken.restype = ctypes.c_char_p
 
-        if "auth_token" not in self.encryption_manager.read_and_decrypt():
+        if not self.auth_token:
             if self.session_token is None:
                 raise TokenNotProvided
-            await self.update_auth_token(self.session_token)
+            self.auth_token = await self.fetch_auth_token()
 
         return self
 
@@ -60,33 +67,41 @@ class ChatGPT:
         finally:
             self.session.close()
 
-    async def fetch_chat(
-        self, user_id=None, conversation_id=None
-    ):  # needs error handeling
-        if user_id and not conversation_id:
-            if user_id in self.conversations:
-                conversation_id = self.conversations[user_id]["conversation_id"]
-            else:
-                return {}
+    async def fetch_chat(self, conversation_id: str) -> dict:
+        """
+        Fetches a chat conversation from the API.
 
-        url = self.CHATGPT_API.format(f"conversation/{conversation_id}")
+        Args:
+            conversation_id (str): The ID of the conversation to fetch.
+
+        Returns:
+            dict: The JSON response from the API containing the chat conversation.
+        """
+        url = CHATGPT_API.format(f"conversation/{conversation_id}")
         response = await self.session.get(url=url, headers=self.build_request_headers())
 
         return response.json()
 
-    async def chat(self, user_id, user_input):  # needs error handeling
-        if user_id not in self.conversations:
-            payload = await self.build_message_payload(user_input, new_chat=True)
-            self.conversations[user_id] = {}
-        else:
-            if (
-                "free" in self.conversations[user_id]
-                and not self.conversations[user_id]["free"]
-            ):
-                yield False
+    async def chat(
+        self,
+        user_input: str,
+        parent_id: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+    ) -> AsyncGenerator[dict, None]:
+        """
+        Asynchronously processes a chat message.
 
-            parent_id = self.conversations[user_id]["parent_id"]
-            conversation_id = self.conversations[user_id]["conversation_id"]
+        Args:
+            user_input (str): The user's input message.
+            parent_id (str, optional): The ID of the parent message, if any. Defaults to None.
+            conversation_id (str, optional): The ID of the conversation, if any. Defaults to None.
+
+        Returns:
+            Iterator[dict]: An iterator that yields JSON objects representing assistant responses.
+        """
+        if not conversation_id and not parent_id:
+            payload = await self.build_message_payload(user_input, new_chat=True)
+        else:
             payload = await self.build_message_payload(
                 user_input,
                 parent_id=parent_id,
@@ -94,9 +109,8 @@ class ChatGPT:
                 new_chat=False,
             )
         try:
-            self.conversations[user_id]["free"] = False
-            full_message = ""
             server_response = ""  # To store what the server returned for debugging in case of an error
+            full_message = None
 
             while True:
                 response = self.send_message(payload=payload)
@@ -116,7 +130,7 @@ class ChatGPT:
                             "message" in decoded_json
                             and decoded_json["message"]["author"]["role"] == "assistant"
                         ):
-                            yield decoded_json["message"]["content"]["parts"][0]
+                            yield decoded_json
                             full_message = decoded_json
                 if (
                     full_message["message"]["metadata"]["finish_details"]["type"]
@@ -137,19 +151,23 @@ class ChatGPT:
 
             sys.exit(1)
 
-        self.conversations[user_id]["free"] = True
-        self.conversations[user_id]["conversation_id"] = full_message["conversation_id"]
-        self.conversations[user_id]["parent_id"] = full_message["message"]["id"]
-        self.save_conversations()
+    async def send_message(self, payload: dict) -> AsyncGenerator[bytes, None]:
+        """
+        Send a message payload to the server and receive the response.
 
-    async def send_message(self, payload):
+        Args:
+            payload (dict): Payload containing message information.
+
+        Yields:
+            bytes: Chunk of data received as a response.
+        """
         response_queue = asyncio.Queue()
 
         async def perform_request():
             def content_callback(chunk):
                 response_queue.put_nowait(chunk)
 
-            url = self.CHATGPT_API.format("conversation")
+            url = CHATGPT_API.format("conversation")
             response = await self.session.post(
                 url=url,
                 headers=self.build_request_headers(),
@@ -157,10 +175,6 @@ class ChatGPT:
                 content_callback=content_callback,
             )
             await response_queue.put(None)
-
-            if "Set-Cookie" in response.headers:
-                new_cookies = {key: value for key, value in response.cookies.items()}
-                self.update_cookies(new_cookies)
 
         stream_task = asyncio.create_task(perform_request())
 
@@ -170,30 +184,35 @@ class ChatGPT:
                 break
             yield chunk
 
-    async def delete_conversation(self, user_id):  # needs error handeling
-        if user_id not in self.conversations:
-            return
+    async def delete_conversation(self, conversation_id: str) -> dict:
+        """
+        Delete a conversation.
 
-        conversation_id = self.conversations[user_id]["conversation_id"]
-        url = self.CHATGPT_API.format(f"conversation/{conversation_id}")
+        Args:
+            conversation_id (str): Unique identifier for the conversation.
 
+        Returns:
+            Response: HTTP response object.
+        """
+        url = CHATGPT_API.format(f"conversation/{conversation_id}")
         response = await self.session.patch(
             url=url, headers=self.build_request_headers(), json={"is_visible": False}
         )
 
-        if "Set-Cookie" in response.headers:
-            new_cookies = {key: value for key, value in response.cookies.items()}
-            self.update_cookies(new_cookies)
+        return response.json()
 
-        del self.conversations[user_id]
-        self.save_conversations()
+    async def fetch_auth_token(self) -> str:
+        """
+        Fetch the authentication token for the session.
 
-    async def update_auth_token(self, session_token):
+        Raises:
+            InvalidSessionToken: If the session token is invalid.
+        """
         url = "https://chat.openai.com/api/auth/session"
-        cookies = {"__Secure-next-auth.session-token": session_token}
+        cookies = {"__Secure-next-auth.session-token": self.session_token}
 
         headers = {
-            "User-Agent": self.USER_AGENT,
+            "User-Agent": USER_AGENT,
             "Accept": "*/*",
             "Accept-Language": "en-US,en;q=0.5",
             "Alt-Used": "chat.openai.com",
@@ -211,20 +230,32 @@ class ChatGPT:
         }
 
         response = await self.session.get(url=url, headers=headers)
-        if "Set-Cookie" in response.headers:
-            new_cookies = {key: value for key, value in response.cookies.items()}
-            self.update_cookies(new_cookies)
         response_json = response.json()
 
         if "accessToken" in response_json:
-            self.save_auth_token(response_json["accessToken"])
-            return
+            return response_json["accessToken"]
 
         raise InvalidSessionToken
 
     async def build_message_payload(
-        self, user_input, parent_id=None, conversation_id=None, new_chat=True
-    ):
+        self,
+        user_input: str,
+        parent_id: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        new_chat: Optional[bool] = True,
+    ) -> dict:
+        """
+        Build a payload for sending a user message.
+
+        Args:
+            user_input (str): User's input message.
+            parent_id (str): ID of the parent message if it's a follow-up message.
+            conversation_id (str): Unique identifier for the conversation.
+            new_chat (bool): Flag indicating whether it's a new chat or continuation.
+
+        Returns:
+            dict: Payload containing message information.
+        """
         payload = {
             "conversation_mode": {"conversation_mode": {"kind": "primary_assistant"}},
             "conversation_id": None if new_chat else conversation_id,
@@ -246,7 +277,19 @@ class ChatGPT:
 
         return payload
 
-    async def build_message_continuation_payload(self, conversation_id, parent_id):
+    async def build_message_continuation_payload(
+        self, conversation_id: str, parent_id: str
+    ) -> dict:
+        """
+        Build a payload for continuing a conversation.
+
+        Args:
+            conversation_id (str): Unique identifier for the conversation.
+            parent_id (str): ID of the parent message.
+
+        Returns:
+            dict: Payload containing message information for continuation.
+        """
         payload = {
             "conversation_mode": {"conversation_mode": {"kind": "primary_assistant"}},
             "action": "continue",
@@ -261,7 +304,13 @@ class ChatGPT:
 
         return payload
 
-    async def arkose_token_generator(self):  # needs error handeling
+    async def arkose_token_generator(self) -> str:
+        """
+        Generate an Arkose token for authentication.
+
+        Returns:
+            str: Arkose token.
+        """
         if self.binary_path:
             try:
                 result = self.arkose.GetToken()
@@ -270,7 +319,7 @@ class ChatGPT:
                 pass
 
         for _ in range(5):
-            response = await self.session.get(self.BACKUP_ARKOSE_TOKEN_GENERATOR)
+            response = await self.session.get(BACKUP_ARKOSE_TOKEN_GENERATOR)
             if response.text == "null":
                 raise BackendError(error_code=505)
             try:
@@ -278,66 +327,40 @@ class ChatGPT:
             except:
                 await asyncio.sleep(0.7)
 
-        raise RetryError(website=self.BACKUP_ARKOSE_TOKEN_GENERATOR)
+        raise RetryError(website=BACKUP_ARKOSE_TOKEN_GENERATOR)
 
-    def update_cookies(self, new_cookies):
-        data = self.encryption_manager.read_and_decrypt()
-        if "cookies" not in data:
-            data["cookies"] = new_cookies
-        else:
-            data["cookies"].update(new_cookies)
-        self.encryption_manager.encrypt_and_save(data)
+    def build_request_headers(self) -> dict:
+        """
+        Build headers for HTTP requests.
 
-    def save_conversations(self):
-        data = self.encryption_manager.read_and_decrypt()
-        data["conversations"] = self.conversations
-
-        self.encryption_manager.encrypt_and_save(data)
-
-    def save_auth_token(self, token):
-        data = self.encryption_manager.read_and_decrypt()
-        data["auth_token"] = token
-
-        self.encryption_manager.encrypt_and_save(data)
-
-    def get_conversations(self):
-        data = self.encryption_manager.read_and_decrypt()
-        if "conversations" in data:
-            return data["conversations"]
-
-        return {}
-
-    def get_auth_token(self):
-        return self.encryption_manager.read_and_decrypt()["auth_token"]
-
-    def get_cookies(self):
-        return self.encryption_manager.read_and_decrypt()["cookies"]
-
-    def build_request_headers(self):
-        cookies = self.get_cookies()
-
+        Returns:
+            dict: Request headers.
+        """
         headers = {
-            "User-Agent": self.USER_AGENT,
+            "User-Agent": USER_AGENT,
             "Accept": "text/event-stream",
             "Accept-Language": "en-US",
             "Accept-Encoding": "gzip, deflate, br",
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.get_auth_token()}",
+            "Authorization": f"Bearer {self.auth_token}",
             "Origin": "https://chat.openai.com",
             "Alt-Used": "chat.openai.com",
             "Connection": "keep-alive",
-            "Cookie": "; ".join(
-                [
-                    f"{cookie_key}={cookie_value}"
-                    for cookie_key, cookie_value in cookies.items()
-                ]
-            ),
         }
 
         return headers
 
     @staticmethod
-    def decode_raw_json(raw_json_data):
+    def decode_raw_json(raw_json_data: str) -> dict or bool:
+        """
+        Decode raw JSON data.
+
+        Args:
+            raw_json_data (str): Raw JSON data as a string.
+
+        Returns:
+            dict: Decoded JSON data.
+        """
         try:
             decoded_json = json.loads(raw_json_data.strip())
             return decoded_json
