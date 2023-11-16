@@ -72,7 +72,6 @@ ChatGPT has an official API which can be used to interface your Python code to i
 ### Built Using
 
 * [![Python][python-badge]][python-url]
-* [![curl_cffi][curl-cffi-badge]][curl-cffi-url]
 
 ## Getting Started
 
@@ -85,17 +84,81 @@ ChatGPT has an official API which can be used to interface your Python code to i
 ```sh
 pip install git+https://github.com/Zai-Kun/reverse-engineered-chatgpt.git
 ```
+## Usage
 
-### Obtaining Session Token
+### Basic example
+
+```python
+import asyncio
+import configparser
+import sys
+
+from re_gpt import ChatGPT
+
+# Load configuration from config.ini
+config = configparser.ConfigParser()
+config.read("config.ini")
+chat_session = config["session"]
+
+# If the Python version is 3.8 or higher and the platform is Windows, set the event loop policy
+if sys.version_info >= (3, 8) and sys.platform.lower().startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+async def main():
+    # Create an asynchronous ChatGPT instance using the session token from the config file
+    async with ChatGPT(session_token=chat_session["token"]) as chatgpt: # Your '__Secure-next-auth.session-token'
+        # Get user input for the chat prompt
+        prompt = input("Enter your prompt: ")
+
+        # Check if a conversation_id exists in the config file
+        if chat_session["conversation_id"]:
+            # Continue the existing chat using conversation_id and parent_id if available
+            raw_reply = chatgpt.chat(
+                prompt,
+                conversation_id=chat_session["conversation_id"],
+                parent_id=chat_session["parent_id"],
+            )
+        else:
+            # Start a new chat if conversation_id is not available
+            raw_reply = chatgpt.chat(prompt)
+
+        reply = ""
+
+        # Iterate through the messages received from the chat
+        async for message in raw_reply:
+            # If it's a new chat, update the conversation_id in the config file
+            if not chat_session["conversation_id"]:
+                chat_session["conversation_id"] = message["conversation_id"]
+
+            # Update the parent_id in the config file with the ID of the last message in the chat
+            if chat_session["parent_id"] != message["message"]["id"]:
+                chat_session["parent_id"] = message["message"]["id"]
+
+            # Get the content of the message and update the reply variable
+            reply = message["message"]["content"]["parts"][0]
+
+        # Write the updated configuration back to the config file
+        with open("config.ini", "w") as file:
+            config.write(file)
+
+        # Print the final reply
+        print(reply)
+
+
+if __name__ == "__main__":
+    # Run the asynchronous main function using asyncio.run()
+    asyncio.run(main())
+```
+
+For a more complex example, check out the [examples](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/examples) folder.
+
+### Obtaining The Session Token
 
 1. Go to <https://chat.openai.com/chat> and log in or sign up.
 2. Open the developer tools in your browser.
 3. Go to the `Application` tab and open the `Cookies` section.
 4. Copy the value for `__Secure-next-auth.session-token` and save it.
-
-## Usage
-
-See the [examples](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/examples) folder for a few example codes to understand this project
 
 ## Roadmap
 
@@ -153,7 +216,5 @@ Repo Link: <https://github.com/Zai-Kun/reverse-engineered-chatgpt>
 [discussions-url]: https://github.com/Zai-Kun/reverse-engineered-chatgpt/discussions
 [python-badge]: https://img.shields.io/badge/Python-blue?logo=python&logoColor=yellow
 [python-url]: https://www.python.org/
-[curl-cffi-url]: https://github.com/aio-libs/curl-cffi
-[curl-cffi-badge]: https://img.shields.io/badge/curl__cffi-green
 [license-badge]: https://img.shields.io/github/license/Zai-Kun/reverse-engineered-chatgpt
 [license-url]: https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/LICENSE
