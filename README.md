@@ -150,8 +150,17 @@ if __name__ == "__main__":
     # Run the asynchronous main function using asyncio.run()
     asyncio.run(main())
 ```
-
 For a more complex example, check out the [examples](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/examples) folder.
+
+#### example config file 
+
+```ini
+[session]
+token = __Secure-next-auth.session-token here
+conversation_id = conversation_id here
+parent_id = parent_id
+```
+For more information on 'parent_id' and 'conversation_id', check out [parent_id docs](docs/FetchParentID.md)
 
 ### Obtaining The Session Token
 
