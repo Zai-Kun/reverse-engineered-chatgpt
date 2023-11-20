@@ -129,9 +129,8 @@ if __name__ == "__main__":
     asyncio.run(main())
 
 ```
-### Additional Notes
+### Note
 
-- Session Token: Ensure you replace the placeholder '\_\_Secure-next-auth.session-token\_\_ here' with your actual session token.
 - Conversation and Parent IDs: Refer to the [documentation about conversation and parent IDs](docs/ConversationID%20And%20ParentID.md) for more information on these parameters.
 
 ## More Examples
