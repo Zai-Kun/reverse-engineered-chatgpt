@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
 ## More Examples
 
-For more complex examples, check out the examples folder in the repository.
+For a more complex example, check out the [examples](/examples) folder in the repository.
 
 ### Obtaining The Session Token
 
