@@ -165,3 +165,9 @@ funcaptcha_bin
 test/
 config.ini
 test.py
+
+#-----------------
+scripts/*
+!scripts/GPT-cli.py
+!scripts/cred.py.template
+!scripts/get_parent_id.py

@@ -1,0 +1,8 @@
+Credentials = {
+    'session_token' : "__Secure-next-auth.session-token here",
+    'conversation_id' : "conversation ID here",
+    'parent_id' : "parent ID here"
+}
+
+def creds(cred):
+    return Credentials[cred]
