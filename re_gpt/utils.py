@@ -40,7 +40,9 @@ async def get_binary_path(session):
     if binary_path is None:
         return None
 
-    if not os.path.exists(funcaptcha_bin_folder_path) or not os.path.isdir(funcaptcha_bin_folder_path):
+    if not os.path.exists(funcaptcha_bin_folder_path) or not os.path.isdir(
+        funcaptcha_bin_folder_path
+    ):
         os.mkdir(funcaptcha_bin_folder_path)
 
     if os.path.isfile(binary_path):
@@ -48,22 +50,22 @@ async def get_binary_path(session):
             local_binary_hash = calculate_file_md5(binary_path)
             response = await session.get(latest_release_url)
             json_data = response.json()
+
+            for line in json_data["body"].splitlines():
+                if line.startswith(current_os):
+                    latest_binary_hash = line.split("=")[-1]
+                    break
+
+            if local_binary_hash != latest_binary_hash:
+                file_url = next(
+                    asset["browser_download_url"]
+                    for asset in json_data["assets"]
+                    if asset["name"] == binary_file_name
+                )
+
+                await download_binary(session, binary_path, file_url)
         except:
             return binary_path
-
-        for line in json_data["body"].splitlines():
-            if line.startswith(current_os):
-                latest_binary_hash = line.split("=")[-1]
-                break
-
-        if local_binary_hash != latest_binary_hash:
-            file_url = next(
-                asset["browser_download_url"]
-                for asset in json_data["assets"]
-                if asset["name"] == binary_file_name
-            )
-
-            await download_binary(session, binary_path, file_url)
     else:
         response = await session.get(latest_release_url)
         json_data = response.json()
