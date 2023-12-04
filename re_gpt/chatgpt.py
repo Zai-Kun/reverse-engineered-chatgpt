@@ -9,7 +9,13 @@ from typing import AsyncGenerator, Callable, Optional
 
 from curl_cffi.requests import AsyncSession
 
-from .errors import BackendError, InvalidSessionToken, RetryError, TokenNotProvided
+from .errors import (
+    BackendError,
+    InvalidSessionToken,
+    RetryError,
+    TokenNotProvided,
+    UnexpectedResponseError,
+)
 from .utils import get_binary_path
 
 # Constants
@@ -108,10 +114,13 @@ class ChatGPT:
                 conversation_id=conversation_id,
                 new_chat=False,
             )
-        try:
-            server_response = ""  # To store what the server returned for debugging in case of an error
-            full_message = None
 
+        server_response = (
+            ""  # To store what the server returned for debugging in case of an error
+        )
+        error = None
+        try:
+            full_message = None
             while True:
                 response = self.send_message(payload=payload)
                 async for chunk in response:
@@ -145,11 +154,11 @@ class ChatGPT:
                 else:
                     break
         except Exception as e:
-            print("An unexpected error occurred.")
-            print(f"Error message: {e}")
-            print(f"This is what the server returned: {server_response}")
+            error = e
 
-            sys.exit(1)
+        # raising the error outside the 'except' block to prevent the 'During handling of the above exception, another exception occurred' error
+        if error is not None:
+            raise UnexpectedResponseError(error, server_response)
 
     async def send_message(self, payload: dict) -> AsyncGenerator[bytes, None]:
         """

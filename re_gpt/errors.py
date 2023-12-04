@@ -24,3 +24,11 @@ class BackendError(Exception):
             f"An error occurred on the backend. Error code: {self.error_code}"
         )
         super().__init__(self.message)
+
+
+class UnexpectedResponseError(Exception):
+    def __init__(self, original_exception, server_response):
+        self.original_exception = original_exception
+        self.server_response = server_response
+        self.message = f"An unexpected error occurred. Error message: {self.original_exception}.\nThis is what the server returned: {self.server_response}."
+        super().__init__(self.message)
