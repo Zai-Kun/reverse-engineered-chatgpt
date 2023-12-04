@@ -82,7 +82,8 @@ async def main():
                 # The 'conversation_id' will be empty if it's a new chat, so we assign the new chat's ID
                 if not chat_session["conversation_id"]:
                     chat_session["conversation_id"] = message["conversation_id"]
-                chat_session["parent_id"] = message["message"]["id"]
+                if chat_session["parent_id"] != message["message"]["id"]:
+                    chat_session["parent_id"] = message["message"]["id"]
 
                 # Print the ChatGPT's reply
                 message_text = message["message"]["content"]["parts"][0]
