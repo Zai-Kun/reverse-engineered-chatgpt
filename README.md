@@ -97,7 +97,6 @@ from re_gpt import ChatGPT
 # consts
 session_token = "__Secure-next-auth.session-token here"
 conversation_id = "conversation ID here"
-parent_id = "parent ID here"
 
 # If the Python version is 3.8 or higher and the platform is Windows, set the event loop policy
 if sys.version_info >= (3, 8) and sys.platform.lower().startswith("win"):
@@ -110,28 +109,24 @@ async def main():
         # Get user input for the chat prompt
         prompt = input("Enter your prompt: ")
 
-        # Continue the existing chat using conversation_id and parent_id
-        async_chat_stream = chatgpt.chat(
-            prompt, conversation_id=conversation_id, parent_id=parent_id
-        )
+        # Continue the existing chat using conversation_id or create a new chat if conversation_id is none
+        if conversation_id:
+            conversation = chatgpt.get_conversation(conversation_id)
+        else:
+            conversation = chatgpt.create_new_conversation()
 
-        reply = ""
-
-        # Iterate through the messages received from the chat and print it
-        async for message in async_chat_stream:
+        last_message = ""
+        # Iterate through the messages received from the chatgpt and print it
+        async for message in conversation.chat("prompt"):
             message = message["message"]["content"]["parts"][0]
-            print(message[len(reply) :], flush=True)
-            reply = message
+            print(message[len(last_message) :], flush=True)
+            last_message = message
 
 
 if __name__ == "__main__":
     # Run the asynchronous main function using asyncio.run()
     asyncio.run(main())
-
 ```
-### Note
-
-- Conversation and Parent IDs: Refer to the [documentation about conversation and parent IDs](docs/ConversationID%20And%20ParentID.md) for more information on these parameters.
 
 ## More Examples
 
@@ -169,7 +164,7 @@ Don't forget to give the project a star! Thanks again!
 Distributed under the Apache License 2.0. See [`LICENSE`](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/LICENSE
 ) for more information.
 
-## Contact
+## Contact/Bug report
 
 Zai-Kun - [Discord Server](https://discord.gg/ymcqxudVJG)
 
