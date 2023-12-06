@@ -19,23 +19,6 @@ if sys.version_info >= (3, 8) and sys.platform.lower().startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-def get_last_msg_id(chat):
-    """
-    Get the ID of the last message in the chat.
-
-    Args:
-        chat (dict): The chat data.
-
-    Returns:
-        str: The ID of the last message.
-    """
-    mapping = chat.get("mapping", {})
-    if not mapping:
-        return
-    last_msg_key = list(mapping)[-1]  # The key is the message ID
-    return last_msg_key
-
-
 def print_chat(chat):
     """
     Print formatted chat messages to the console.
@@ -55,35 +38,25 @@ async def main():
         # proxies=None,  # Optional proxies for network requests
         session_token=chat_session["token"],  # Use the session token for authentication
     ) as chatgpt:
-        # Fetch and print the existing chat if conversation_id is available
         if chat_session["conversation_id"]:
-            fetched_chat = await chatgpt.fetch_chat(chat_session["conversation_id"])
-            print_chat(fetched_chat)
-            # Set the parent_id to the ID of the last message if not already set
-            if not chat_session["parent_id"]:
-                chat_session["parent_id"] = get_last_msg_id(fetched_chat)
+            conversation = chatgpt.get_conversation(chat_session["conversation_id"])
+        else:
+            conversation = chatgpt.create_new_conversation()
+
+        # Fetch and print the existing chat
+        fetched_chat = await conversation.fetch_chat()
+        print_chat(fetched_chat)
 
         while True:
             user_input = input(f"{GREEN}user: {RESET}")
-            # Continue the existing conversation if conversation_id is available
-            if chat_session["conversation_id"]:
-                reply = chatgpt.chat(
-                    user_input,
-                    parent_id=chat_session["parent_id"],
-                    conversation_id=chat_session["conversation_id"],
-                )
-            else:
-                # Start a new chat if there is no existing conversation
-                reply = chatgpt.chat(user_input)
+            async_chat_stream = conversation.chat(user_input)
 
             last_message = ""
             print()
-            async for message in reply:
+            async for message in async_chat_stream:
                 # The 'conversation_id' will be empty if it's a new chat, so we assign the new chat's ID
                 if not chat_session["conversation_id"]:
                     chat_session["conversation_id"] = message["conversation_id"]
-                if chat_session["parent_id"] != message["message"]["id"]:
-                    chat_session["parent_id"] = message["message"]["id"]
 
                 # Print the ChatGPT's reply
                 message_text = message["message"]["content"]["parts"][0]
