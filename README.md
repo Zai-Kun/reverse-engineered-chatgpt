@@ -164,7 +164,7 @@ Don't forget to give the project a star! Thanks again!
 Distributed under the Apache License 2.0. See [`LICENSE`](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/LICENSE
 ) for more information.
 
-## Contact
+## Contact/Bug report
 
 Zai-Kun - [Discord Server](https://discord.gg/ymcqxudVJG)
 
