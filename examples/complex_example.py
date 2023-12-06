@@ -14,7 +14,7 @@ GREEN = "\033[92m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
 
-# Required for Windows compatibility with asyncio
+# Required for Windows compatibility
 if sys.version_info >= (3, 8) and sys.platform.lower().startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
