@@ -44,7 +44,7 @@
     </li>
     <li><a href="#usage">Usage</a>
         <ul>
-        <li><a href="#example-usage">Example Usage</a></li>
+        <li><a href="#basic-example">Example Usage</a></li>
         </ul>
     </li>
     <li><a href="#roadmap">Roadmap</a></li>
