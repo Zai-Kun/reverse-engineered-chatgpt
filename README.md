@@ -132,7 +132,7 @@ For a more complex example, check out the [examples](/examples) folder in the re
 3. Go to the `Application` tab and open the `Cookies` section.
 4. Copy the value for `__Secure-next-auth.session-token` and save it.
 
-## Roadmap
+## TODO
 
 * [x] Add more examples
 * [ ] Add better error handling
