@@ -27,7 +27,6 @@ def calculate_file_md5(file_path):
         file_content = file.read()
         md5_hash = hashlib.md5(file_content).hexdigest()
         return md5_hash
-
 def get_file_url(json_data):
     for release in json_data:
         if release["tag_name"].startswith("funcaptcha_bin"):
@@ -38,14 +37,15 @@ def get_file_url(json_data):
             )
             return file_url
 
-async def download_binary(session, output_path, file_url):
+# async
+async def async_download_binary(session, output_path, file_url):
     with open(output_path, "wb") as output_file:
         response = await session.get(
             url=file_url, content_callback=lambda chunk: output_file.write(chunk)
         )
 
 
-async def get_binary_path(session):
+async def async_get_binary_path(session):
     if binary_path is None:
         return None
 
@@ -68,7 +68,7 @@ async def get_binary_path(session):
             if local_binary_hash != latest_binary_hash:
                 file_url = get_file_url(json_data)
 
-                await download_binary(session, binary_path, file_url)
+                await async_download_binary(session, binary_path, file_url)
         except:
             return binary_path
     else:
@@ -76,6 +76,50 @@ async def get_binary_path(session):
         json_data = response.json()
         file_url = get_file_url(json_data)
 
-        await download_binary(session, binary_path, file_url)
+        await async_download_binary(session, binary_path, file_url)
+
+    return binary_path
+
+
+# sync
+def sync_download_binary(session, output_path, file_url):
+    with open(output_path, "wb") as output_file:
+        response = session.get(
+            url=file_url, content_callback=lambda chunk: output_file.write(chunk)
+        )
+
+
+def sync_get_binary_path(session):
+    if binary_path is None:
+        return None
+
+    if not os.path.exists(funcaptcha_bin_folder_path) or not os.path.isdir(
+        funcaptcha_bin_folder_path
+    ):
+        os.mkdir(funcaptcha_bin_folder_path)
+
+    if os.path.isfile(binary_path):
+        try:
+            local_binary_hash = calculate_file_md5(binary_path)
+            response = session.get(latest_release_url)
+            json_data = response.json()
+
+            for line in json_data["body"].splitlines():
+                if line.startswith(current_os):
+                    latest_binary_hash = line.split("=")[-1]
+                    break
+
+            if local_binary_hash != latest_binary_hash:
+                file_url = get_file_url(json_data)
+
+                sync_download_binary(session, binary_path, file_url)
+        except:
+            return binary_path
+    else:
+        response = session.get(latest_release_url)
+        json_data = response.json()
+        file_url = get_file_url(json_data)
+
+        sync_download_binary(session, binary_path, file_url)
 
     return binary_path

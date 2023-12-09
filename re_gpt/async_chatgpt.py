@@ -2,21 +2,14 @@ import asyncio
 import ctypes
 import inspect
 import json
-import os
-import sys
 import uuid
 from typing import AsyncGenerator, Callable, Optional
 
 from curl_cffi.requests import AsyncSession
 
-from .errors import (
-    BackendError,
-    InvalidSessionToken,
-    RetryError,
-    TokenNotProvided,
-    UnexpectedResponseError,
-)
-from .utils import get_binary_path
+from .errors import (BackendError, InvalidSessionToken, RetryError,
+                     TokenNotProvided, UnexpectedResponseError)
+from .utils import async_get_binary_path
 
 # Constants
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
@@ -24,7 +17,7 @@ CHATGPT_API = "https://chat.openai.com/backend-api/{}"
 BACKUP_ARKOSE_TOKEN_GENERATOR = "https://arkose-token-generator.zaieem.repl.co/token"
 
 
-class Conversation:
+class AsyncConversation:
     def __init__(self, chatgpt, conversation_id=None):
         self.chatgpt = chatgpt
         self.conversation_id = conversation_id
@@ -260,7 +253,7 @@ class Conversation:
             return False
 
 
-class ChatGPT:
+class AsyncChatGPT:
     def __init__(
         self,
         proxies: Optional[dict] = None,
@@ -288,7 +281,7 @@ class ChatGPT:
         self.session = AsyncSession(
             impersonate="chrome110", timeout=99999, proxies=self.proxies
         )
-        self.binary_path = await get_binary_path(self.session)
+        self.binary_path = await async_get_binary_path(self.session)
 
         if self.binary_path:
             self.arkose = ctypes.CDLL(self.binary_path)
@@ -330,7 +323,7 @@ class ChatGPT:
 
         return headers
 
-    def get_conversation(self, conversation_id: str) -> Conversation:
+    def get_conversation(self, conversation_id: str) -> AsyncConversation:
         """
         Makes an instance of class Conversation and return it.
 
@@ -341,10 +334,10 @@ class ChatGPT:
             Conversation: Conversation object.
         """
 
-        return Conversation(self, conversation_id)
+        return AsyncConversation(self, conversation_id)
 
-    def create_new_conversation(self):
-        return Conversation(self)
+    def create_new_conversation(self) -> AsyncConversation:
+        return AsyncConversation(self)
 
     async def delete_conversation(self, conversation_id: str) -> dict:
         """
