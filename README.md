@@ -121,7 +121,7 @@ if __name__ == "__main__":
 import asyncio
 import sys
 
-from re_gpt import ChatGPT
+from re_gpt import AsyncChatGPT
 
 session_token = "__Secure-next-auth.session-token here"
 conversation_id = "conversation ID here"
@@ -131,7 +131,7 @@ if sys.version_info >= (3, 8) and sys.platform.lower().startswith("win"):
 
 
 async def main():
-    async with ChatGPT(session_token=session_token) as chatgpt:
+    async with AsyncChatGPT(session_token=session_token) as chatgpt:
         prompt = input("Enter your prompt: ")
 
         if conversation_id:
