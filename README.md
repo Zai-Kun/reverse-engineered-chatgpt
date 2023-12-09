@@ -89,6 +89,35 @@ pip install git+https://github.com/Zai-Kun/reverse-engineered-chatgpt.git
 ### Basic example
 
 ```python
+from re_gpt import SyncChatGPT
+
+session_token = "__Secure-next-auth.session-token here"
+conversation_id = None
+
+
+def main():
+    with SyncChatGPT(session_token=session_token) as chatgpt:
+        prompt = input("Enter your prompt: ")
+
+        if conversation_id:
+            conversation = chatgpt.get_conversation(conversation_id)
+        else:
+            conversation = chatgpt.create_new_conversation()
+
+        last_message = ""
+        for message in conversation.chat(prompt):
+            message = message["message"]["content"]["parts"][0]
+            print(message[len(last_message) :], flush=True)
+            last_message = message
+
+
+if __name__ == "__main__":
+    main()
+
+```
+
+### Basic async example
+```python
 import asyncio
 import sys
 
@@ -111,7 +140,7 @@ async def main():
             conversation = chatgpt.create_new_conversation()
 
         last_message = ""
-        async for message in conversation.chat("prompt"):
+        async for message in conversation.chat(prompt):
             message = message["message"]["content"]["parts"][0]
             print(message[len(last_message) :], flush=True)
             last_message = message

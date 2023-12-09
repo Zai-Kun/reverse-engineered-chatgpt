@@ -1,6 +1,8 @@
+import asyncio
 import configparser
+import sys
 
-from re_gpt import SyncChatGPT
+from re_gpt import AsyncChatGPT
 
 # Load configuration from 'config.ini'
 config = configparser.ConfigParser()
@@ -11,6 +13,10 @@ chat_session = config["session"]
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
+
+# Required for Windows compatibility
+if sys.version_info >= (3, 8) and sys.platform.lower().startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 def print_chat(chat):
@@ -27,8 +33,8 @@ def print_chat(chat):
             print(f"{GREEN if role == 'user' else YELLOW}{role}: {RESET}{content}\n")
 
 
-def main():
-    with SyncChatGPT(
+async def main():
+    async with AsyncChatGPT(
         # proxies=None,  # Optional proxies for network requests
         session_token=chat_session["token"],  # Use the session token for authentication
     ) as chatgpt:
@@ -38,16 +44,16 @@ def main():
             conversation = chatgpt.create_new_conversation()
 
         # Fetch and print the existing chat
-        fetched_chat = conversation.fetch_chat()
+        fetched_chat = await conversation.fetch_chat()
         print_chat(fetched_chat)
 
         while True:
             user_input = input(f"{GREEN}user: {RESET}")
-            chat_stream = conversation.chat(user_input)
+            async_chat_stream = conversation.chat(user_input)
 
             last_message = ""
             print()
-            for message in chat_stream:
+            async for message in async_chat_stream:
                 # The 'conversation_id' will be empty if it's a new chat, so we assign the new chat's ID
                 if not chat_session["conversation_id"]:
                     chat_session["conversation_id"] = message["conversation_id"]
@@ -66,6 +72,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 # Note: The 'conversation_id' will be found in the chat's url: 'https://chat.openai.com/c/conversation_id'
