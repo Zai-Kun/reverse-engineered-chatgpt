@@ -36,6 +36,9 @@ class Conversation:
 
         Returns:
             dict: The JSON response from the API containing the chat if the conversation_id is not none, else returns an empty dict.
+        
+        Raises:
+            UnexpectedResponseError: If the response is not a valid JSON object or if the response json is not in the expected format
         """
         if not self.conversation_id:
             return {}
@@ -45,8 +48,14 @@ class Conversation:
             url=url, headers=self.chatgpt.build_request_headers()
         )
 
-        chat = response.json()
-        self.parent_id = list(chat.get("mapping", {}))[-1]
+        error = None
+        try:
+            chat = response.json()
+            self.parent_id = list(chat.get("mapping", {}))[-1]
+        except Exception as e:
+            error = e
+        if error is not None:
+            raise UnexpectedResponseError(error, response.text)
 
         return chat
 
@@ -62,6 +71,9 @@ class Conversation:
 
         Returns:
             AsyncGenerator[dict, None]: An asynchronous generator object that yields assistant responses.
+        
+        Raises:
+            UnexpectedResponseError: If the response is not a valid JSON object or if the response json is not in the expected format
         """
 
         payload = await self.build_message_payload(user_input)
