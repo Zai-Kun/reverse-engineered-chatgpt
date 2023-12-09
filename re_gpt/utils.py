@@ -9,7 +9,7 @@ current_file_directory = "/".join(
 
 funcaptcha_bin_folder_path = f"{current_file_directory}/funcaptcha_bin"
 latest_release_url = (
-    "https://api.github.com/repos/Zai-Kun/reverse-engineered-chatgpt/releases/latest"
+    "https://api.github.com/repos/Zai-Kun/reverse-engineered-chatgpt/releases"
 )
 
 binary_file_name = {"Windows": "windows_arkose.dll", "Linux": "linux_arkose.so"}.get(
@@ -28,6 +28,15 @@ def calculate_file_md5(file_path):
         md5_hash = hashlib.md5(file_content).hexdigest()
         return md5_hash
 
+def get_file_url(json_data):
+    for release in json_data:
+        if release["tag_name"].startswith("funcaptcha_bin"):
+            file_url = next(
+                asset["browser_download_url"]
+                for asset in release["assets"]
+                if asset["name"] == binary_file_name
+            )
+            return file_url
 
 async def download_binary(session, output_path, file_url):
     with open(output_path, "wb") as output_file:
@@ -57,11 +66,7 @@ async def get_binary_path(session):
                     break
 
             if local_binary_hash != latest_binary_hash:
-                file_url = next(
-                    asset["browser_download_url"]
-                    for asset in json_data["assets"]
-                    if asset["name"] == binary_file_name
-                )
+                file_url = get_file_url(json_data)
 
                 await download_binary(session, binary_path, file_url)
         except:
@@ -69,12 +74,7 @@ async def get_binary_path(session):
     else:
         response = await session.get(latest_release_url)
         json_data = response.json()
-
-        file_url = next(
-            asset["browser_download_url"]
-            for asset in json_data["assets"]
-            if asset["name"] == binary_file_name
-        )
+        file_url = get_file_url(json_data)
 
         await download_binary(session, binary_path, file_url)
 
