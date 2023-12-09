@@ -7,8 +7,13 @@ from typing import AsyncGenerator, Callable, Optional
 
 from curl_cffi.requests import AsyncSession
 
-from .errors import (BackendError, InvalidSessionToken, RetryError,
-                     TokenNotProvided, UnexpectedResponseError)
+from .errors import (
+    BackendError,
+    InvalidSessionToken,
+    RetryError,
+    TokenNotProvided,
+    UnexpectedResponseError,
+)
 from .utils import async_get_binary_path
 
 # Constants
@@ -29,7 +34,7 @@ class AsyncConversation:
 
         Returns:
             dict: The JSON response from the API containing the chat if the conversation_id is not none, else returns an empty dict.
-        
+
         Raises:
             UnexpectedResponseError: If the response is not a valid JSON object or if the response json is not in the expected format
         """
@@ -64,7 +69,7 @@ class AsyncConversation:
 
         Returns:
             AsyncGenerator[dict, None]: An asynchronous generator object that yields assistant responses.
-        
+
         Raises:
             UnexpectedResponseError: If the response is not a valid JSON object or if the response json is not in the expected format
         """

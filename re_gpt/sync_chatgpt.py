@@ -9,10 +9,20 @@ from typing import Callable, Generator, Optional
 
 from curl_cffi.requests import Session
 
-from .async_chatgpt import (BACKUP_ARKOSE_TOKEN_GENERATOR, CHATGPT_API,
-                            USER_AGENT, AsyncChatGPT, AsyncConversation)
-from .errors import (BackendError, InvalidSessionToken, RetryError,
-                     TokenNotProvided, UnexpectedResponseError)
+from .async_chatgpt import (
+    BACKUP_ARKOSE_TOKEN_GENERATOR,
+    CHATGPT_API,
+    USER_AGENT,
+    AsyncChatGPT,
+    AsyncConversation,
+)
+from .errors import (
+    BackendError,
+    InvalidSessionToken,
+    RetryError,
+    TokenNotProvided,
+    UnexpectedResponseError,
+)
 from .utils import sync_get_binary_path
 
 
@@ -26,7 +36,7 @@ class SyncConversation(AsyncConversation):
 
         Returns:
             dict: The JSON response from the API containing the chat if the conversation_id is not none, else returns an empty dict.
-        
+
         Raises:
             UnexpectedResponseError: If the response is not a valid JSON object or if the response json is not in the expected format
         """
@@ -61,7 +71,7 @@ class SyncConversation(AsyncConversation):
 
         Returns:
             Generator[dict, None]: A generator object that yields assistant responses.
-        
+
         Raises:
             UnexpectedResponseError: If the response is not a valid JSON object or if the response json is not in the expected format
         """
@@ -221,7 +231,7 @@ class SyncConversation(AsyncConversation):
                 time.sleep(0.7)
 
         raise RetryError(website=BACKUP_ARKOSE_TOKEN_GENERATOR)
-    
+
     def delete(self) -> None:
         """
         Deletes the conversation.
@@ -231,6 +241,7 @@ class SyncConversation(AsyncConversation):
 
             self.conversation_id = None
             self.parent_id = None
+
 
 class SyncChatGPT(AsyncChatGPT):
     def __init__(

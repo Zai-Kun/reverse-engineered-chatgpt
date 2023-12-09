@@ -27,6 +27,8 @@ def calculate_file_md5(file_path):
         file_content = file.read()
         md5_hash = hashlib.md5(file_content).hexdigest()
         return md5_hash
+
+
 def get_file_url(json_data):
     for release in json_data:
         if release["tag_name"].startswith("funcaptcha_bin"):
@@ -36,6 +38,7 @@ def get_file_url(json_data):
                 if asset["name"] == binary_file_name
             )
             return file_url
+
 
 # async
 async def async_download_binary(session, output_path, file_url):
