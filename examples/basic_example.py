@@ -19,7 +19,7 @@ def main():
 
         last_message = ""
         # Iterate through the messages received from the chatgpt and print it
-        for message in conversation.chat("prompt"):
+        for message in conversation.chat(prompt):
             message = message["message"]["content"]["parts"][0]
             print(message[len(last_message) :], flush=True)
             last_message = message

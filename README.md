@@ -105,7 +105,7 @@ def main():
             conversation = chatgpt.create_new_conversation()
 
         last_message = ""
-        for message in conversation.chat("prompt"):
+        for message in conversation.chat(prompt):
             message = message["message"]["content"]["parts"][0]
             print(message[len(last_message) :], flush=True)
             last_message = message
@@ -140,7 +140,7 @@ async def main():
             conversation = chatgpt.create_new_conversation()
 
         last_message = ""
-        async for message in conversation.chat("prompt"):
+        async for message in conversation.chat(prompt):
             message = message["message"]["content"]["parts"][0]
             print(message[len(last_message) :], flush=True)
             last_message = message
