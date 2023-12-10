@@ -5,7 +5,7 @@ from re_gpt import AsyncChatGPT
 
 # consts
 session_token = "__Secure-next-auth.session-token here"
-conversation_id = None # Set it to the conversation ID if you want to continue an existing chat or None to create a new chat
+conversation_id = None  # Set it to the conversation ID if you want to continue an existing chat or None to create a new chat
 
 # If the Python version is 3.8 or higher and the platform is Windows, set the event loop policy
 if sys.version_info >= (3, 8) and sys.platform.lower().startswith("win"):
@@ -24,12 +24,9 @@ async def main():
         else:
             conversation = chatgpt.create_new_conversation()
 
-        last_message = ""
         # Iterate through the messages received from the chatgpt and print it
-        async for message in conversation.chat(prompt):
-            message = message["message"]["content"]["parts"][0]
-            print(message[len(last_message) :], flush=True)
-            last_message = message
+        async for message_chunk in conversation.chat(prompt):
+            print(message_chunk["content"], flush=True, end="")
 
 
 if __name__ == "__main__":

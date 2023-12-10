@@ -45,18 +45,19 @@ def main():
             user_input = input(f"{GREEN}user: {RESET}")
             chat_stream = conversation.chat(user_input)
 
-            last_message = ""
-            print()
+            print_header = True
             for message in chat_stream:
                 # The 'conversation_id' will be empty if it's a new chat, so we assign the new chat's ID
                 if not chat_session["conversation_id"]:
                     chat_session["conversation_id"] = message["conversation_id"]
 
+                # print header for the response
+                if print_header:
+                    print(f"\n{YELLOW}assistant: {RESET}", end="", flush=True)
+                    print_header = False
+
                 # Print the ChatGPT's reply
-                message_text = message["message"]["content"]["parts"][0]
-                formatted_message = f"{YELLOW}assistant: {RESET}" + message_text
-                print(formatted_message[len(last_message) :], end="", flush=True)
-                last_message = formatted_message
+                print(message["content"], end="", flush=True)
 
             print("\n")
 

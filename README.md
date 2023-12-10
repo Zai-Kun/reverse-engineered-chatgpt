@@ -92,7 +92,7 @@ pip install git+https://github.com/Zai-Kun/reverse-engineered-chatgpt.git
 from re_gpt import SyncChatGPT
 
 session_token = "__Secure-next-auth.session-token here"
-conversation_id = None
+conversation_id = None # conversation ID here
 
 
 def main():
@@ -104,11 +104,8 @@ def main():
         else:
             conversation = chatgpt.create_new_conversation()
 
-        last_message = ""
         for message in conversation.chat(prompt):
-            message = message["message"]["content"]["parts"][0]
-            print(message[len(last_message) :], flush=True)
-            last_message = message
+            print(message["content"], flush=True, end=True)
 
 
 if __name__ == "__main__":
@@ -124,7 +121,7 @@ import sys
 from re_gpt import AsyncChatGPT
 
 session_token = "__Secure-next-auth.session-token here"
-conversation_id = "conversation ID here"
+conversation_id = conversation_id = None # conversation ID here
 
 if sys.version_info >= (3, 8) and sys.platform.lower().startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -139,11 +136,8 @@ async def main():
         else:
             conversation = chatgpt.create_new_conversation()
 
-        last_message = ""
         async for message in conversation.chat(prompt):
-            message = message["message"]["content"]["parts"][0]
-            print(message[len(last_message) :], flush=True)
-            last_message = message
+            print(message["content"], flush=True, end=True)
 
 
 if __name__ == "__main__":
