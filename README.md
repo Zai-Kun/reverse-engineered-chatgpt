@@ -105,7 +105,7 @@ def main():
             conversation = chatgpt.create_new_conversation()
 
         for message in conversation.chat(prompt):
-            print(message["content"], flush=True, end=True)
+            print(message["content"], flush=True, end="")
 
 
 if __name__ == "__main__":
@@ -137,7 +137,7 @@ async def main():
             conversation = chatgpt.create_new_conversation()
 
         async for message in conversation.chat(prompt):
-            print(message["content"], flush=True, end=True)
+            print(message["content"], flush=True, end="")
 
 
 if __name__ == "__main__":
