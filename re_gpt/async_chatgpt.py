@@ -100,7 +100,16 @@ class AsyncConversation:
                             "message" in decoded_json
                             and decoded_json["message"]["author"]["role"] == "assistant"
                         ):
-                            yield decoded_json
+                            processed_response = self.filter_response(decoded_json)
+                            if full_message:
+                                prev_resp_len = len(
+                                    full_message["message"]["content"]["parts"][0]
+                                )
+                                processed_response["content"] = processed_response[
+                                    "content"
+                                ][prev_resp_len::]
+
+                            yield processed_response
                             full_message = decoded_json
                 self.conversation_id = full_message["conversation_id"]
                 self.parent_id = full_message["message"]["id"]
@@ -256,6 +265,17 @@ class AsyncConversation:
             return decoded_json
         except:
             return False
+
+    @staticmethod
+    def filter_response(response):
+        processed_response = {
+            "content": response["message"]["content"]["parts"][0],
+            "message_id": response["message"]["id"],
+            "parent_id": response["message"]["metadata"]["parent_id"],
+            "conversation_id": response["conversation_id"],
+        }
+
+        return processed_response
 
 
 class AsyncChatGPT:

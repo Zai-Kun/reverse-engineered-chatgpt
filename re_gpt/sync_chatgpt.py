@@ -102,7 +102,16 @@ class SyncConversation(AsyncConversation):
                             "message" in decoded_json
                             and decoded_json["message"]["author"]["role"] == "assistant"
                         ):
-                            yield decoded_json
+                            processed_response = self.filter_response(decoded_json)
+                            if full_message:
+                                prev_resp_len = len(
+                                    full_message["message"]["content"]["parts"][0]
+                                )
+                                processed_response["content"] = processed_response[
+                                    "content"
+                                ][prev_resp_len::]
+
+                            yield processed_response
                             full_message = decoded_json
                 self.conversation_id = full_message["conversation_id"]
                 self.parent_id = full_message["message"]["id"]
