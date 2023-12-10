@@ -95,21 +95,16 @@ session_token = "__Secure-next-auth.session-token here"
 conversation_id = None # conversation ID here
 
 
-def main():
-    with SyncChatGPT(session_token=session_token) as chatgpt:
-        prompt = input("Enter your prompt: ")
+with SyncChatGPT(session_token=session_token) as chatgpt:
+    prompt = input("Enter your prompt: ")
 
-        if conversation_id:
-            conversation = chatgpt.get_conversation(conversation_id)
-        else:
-            conversation = chatgpt.create_new_conversation()
+    if conversation_id:
+        conversation = chatgpt.get_conversation(conversation_id)
+    else:
+        conversation = chatgpt.create_new_conversation()
 
-        for message in conversation.chat(prompt):
-            print(message["content"], flush=True, end="")
-
-
-if __name__ == "__main__":
-    main()
+    for message in conversation.chat(prompt):
+        print(message["content"], flush=True, end="")
 
 ```
 
