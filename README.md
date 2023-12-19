@@ -82,7 +82,7 @@ ChatGPT has an official API which can be used to interface your Python code to i
 ### Installation
 
 ```sh
-pip install git+https://github.com/Zai-Kun/reverse-engineered-chatgpt.git
+pip install re-gpt
 ```
 ## Usage
 
