@@ -176,7 +176,9 @@ class SyncConversation(AsyncConversation):
             "conversation_mode": {"conversation_mode": {"kind": "primary_assistant"}},
             "conversation_id": self.conversation_id,
             "action": "next",
-            "arkose_token": self.arkose_token_generator(),
+            "arkose_token": self.arkose_token_generator()
+            if self.chatgpt.generate_arkose_token
+            else None,
             "force_paragen": False,
             "history_and_training_disabled": False,
             "messages": [
@@ -205,7 +207,9 @@ class SyncConversation(AsyncConversation):
         payload = {
             "conversation_mode": {"conversation_mode": {"kind": "primary_assistant"}},
             "action": "continue",
-            "arkose_token": self.arkose_token_generator(),
+            "arkose_token": self.arkose_token_generator()
+            if self.chatgpt.generate_arkose_token
+            else None,
             "conversation_id": self.conversation_id,
             "force_paragen": False,
             "history_and_training_disabled": False,
@@ -223,6 +227,15 @@ class SyncConversation(AsyncConversation):
         Returns:
             str: Arkose token.
         """
+        if not self.chatgpt.tried_downloading_binary:
+            self.chatgpt.binary_path = sync_get_binary_path(self.chatgpt.session)
+
+            if self.chatgpt.binary_path:
+                self.chatgpt.arkose = ctypes.CDLL(self.chatgpt.binary_path)
+                self.chatgpt.arkose.GetToken.restype = ctypes.c_char_p
+
+            self.chatgpt.tried_downloading_binary = True
+
         if self.chatgpt.binary_path:
             try:
                 result = self.chatgpt.arkose.GetToken()
@@ -280,11 +293,15 @@ class SyncChatGPT(AsyncChatGPT):
         self.session = Session(
             impersonate="chrome110", timeout=99999, proxies=self.proxies
         )
-        self.binary_path = sync_get_binary_path(self.session)
 
-        if self.binary_path:
-            self.arkose = ctypes.CDLL(self.binary_path)
-            self.arkose.GetToken.restype = ctypes.c_char_p
+        if self.generate_arkose_token:
+            self.binary_path = sync_get_binary_path(self.session)
+
+            if self.binary_path:
+                self.arkose = ctypes.CDLL(self.binary_path)
+                self.arkose.GetToken.restype = ctypes.c_char_p
+
+            self.tried_downloading_binary = True
 
         if not self.auth_token:
             if self.session_token is None:

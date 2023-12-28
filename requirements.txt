@@ -1,3 +1,1 @@
-cryptography
 curl_cffi==0.5.9
-pycryptodome

@@ -144,7 +144,7 @@ class AsyncConversation:
                 response_queue.put_nowait(chunk)
 
             url = CHATGPT_API.format("conversation")
-            response = await self.chatgpt.session.post(
+            await self.chatgpt.session.post(
                 url=url,
                 headers=self.chatgpt.build_request_headers(),
                 json=payload,
@@ -152,7 +152,7 @@ class AsyncConversation:
             )
             await response_queue.put(None)
 
-        stream_task = asyncio.create_task(perform_request())
+        asyncio.create_task(perform_request())
 
         while True:
             chunk = await response_queue.get()
@@ -174,7 +174,9 @@ class AsyncConversation:
             "conversation_mode": {"conversation_mode": {"kind": "primary_assistant"}},
             "conversation_id": self.conversation_id,
             "action": "next",
-            "arkose_token": await self.arkose_token_generator(),
+            "arkose_token": await self.arkose_token_generator()
+            if self.chatgpt.generate_arkose_token
+            else None,
             "force_paragen": False,
             "history_and_training_disabled": False,
             "messages": [
@@ -203,7 +205,9 @@ class AsyncConversation:
         payload = {
             "conversation_mode": {"conversation_mode": {"kind": "primary_assistant"}},
             "action": "continue",
-            "arkose_token": await self.arkose_token_generator(),
+            "arkose_token": await self.arkose_token_generator()
+            if self.chatgpt.generate_arkose_token
+            else None,
             "conversation_id": self.conversation_id,
             "force_paragen": False,
             "history_and_training_disabled": False,
@@ -221,6 +225,15 @@ class AsyncConversation:
         Returns:
             str: Arkose token.
         """
+        if not self.chatgpt.tried_downloading_binary:
+            self.chatgpt.binary_path = await async_get_binary_path(self.chatgpt.session)
+
+            if self.chatgpt.binary_path:
+                self.chatgpt.arkose = ctypes.CDLL(self.chatgpt.binary_path)
+                self.chatgpt.arkose.GetToken.restype = ctypes.c_char_p
+
+            self.chatgpt.tried_downloading_binary = True
+
         if self.chatgpt.binary_path:
             try:
                 result = self.chatgpt.arkose.GetToken()
@@ -285,6 +298,7 @@ class AsyncChatGPT:
         session_token: Optional[str] = None,
         exit_callback_function: Optional[Callable] = None,
         auth_token: Optional[str] = None,
+        generate_arkose_token: Optional[bool] = False,
     ):
         """
         Initializes an instance of the class.
@@ -294,9 +308,15 @@ class AsyncChatGPT:
             session_token (Optional[str]): A session token. Defaults to None.
             exit_callback_function (Optional[callable]): A function to be called on exit. Defaults to None.
             auth_token (Optional[str]): An authentication token. Defaults to None.
+            generate_arkose_token (Optional[bool]): Toggle whether to generate and send arkose-token in the payload. Defaults to False.
         """
         self.proxies = proxies
         self.exit_callback_function = exit_callback_function
+
+        self.arkose = None
+        self.binary_path = None
+        self.tried_downloading_binary = False
+        self.generate_arkose_token = generate_arkose_token
 
         self.session_token = session_token
         self.auth_token = auth_token
@@ -306,11 +326,14 @@ class AsyncChatGPT:
         self.session = AsyncSession(
             impersonate="chrome110", timeout=99999, proxies=self.proxies
         )
-        self.binary_path = await async_get_binary_path(self.session)
+        if self.generate_arkose_token:
+            self.binary_path = await async_get_binary_path(self.session)
 
-        if self.binary_path:
-            self.arkose = ctypes.CDLL(self.binary_path)
-            self.arkose.GetToken.restype = ctypes.c_char_p
+            if self.binary_path:
+                self.arkose = ctypes.CDLL(self.binary_path)
+                self.arkose.GetToken.restype = ctypes.c_char_p
+
+            self.tried_downloading_binary = True
 
         if not self.auth_token:
             if self.session_token is None:
@@ -319,7 +342,7 @@ class AsyncChatGPT:
 
         return self
 
-    async def __aexit__(self, *args):
+    async def __aexit__(self, *_):
         try:
             if self.exit_callback_function and callable(self.exit_callback_function):
                 if not inspect.iscoroutinefunction(self.exit_callback_function):

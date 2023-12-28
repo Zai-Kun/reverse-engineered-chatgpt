@@ -20,7 +20,7 @@ def print_chat(chat):
     Args:
         chat (dict): The chat data.
     """
-    for key, message in chat.get("mapping", {}).items():
+    for _, message in chat.get("mapping", {}).items():
         if "message" in message and message["message"]["content"]["parts"][0]:
             role = message["message"]["author"]["role"]
             content = message["message"]["content"]["parts"][0]
