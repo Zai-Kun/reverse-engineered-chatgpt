@@ -441,3 +441,31 @@ class AsyncChatGPT:
             return response_json["accessToken"]
 
         raise InvalidSessionToken
+
+    async def set_custom_instructions(
+        self,
+        about_user: Optional[str] = "",
+        about_model: Optional[str] = "",
+        enable_for_new_chats: Optional[bool] = True,
+    ):
+        """
+        Set cuteom instructions for ChatGPT.
+
+        Args:
+            about_user (str): What would you like ChatGPT to know about you to provide better responses?
+            about_model (str): How would you like ChatGPT to respond?
+            enable_for_new_chats (bool): Enable for new chats.
+        Returns:
+            dict: Server response json.
+        """
+        data = {
+            "about_user_message": about_user,
+            "about_model_message": about_model,
+            "enabled": enable_for_new_chats,
+        }
+        url = CHATGPT_API.format("user_system_messages")
+        response = await self.session.post(
+            url=url, headers=self.build_request_headers(), json=data
+        )
+
+        return response.json()
