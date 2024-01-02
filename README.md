@@ -1,4 +1,3 @@
-
 <div align="center">
   <a href="https://github.com/Zai-Kun/reverse-engineered-chatgpt">  </a>
 
@@ -71,19 +70,20 @@ ChatGPT has an official API which can be used to interface your Python code to i
 
 ### Built Using
 
-* [![Python][python-badge]][python-url]
+- [![Python][python-badge]][python-url]
 
 ## Getting Started
 
 ### Prerequisites
 
-* Python >= 3.9
+- Python >= 3.9
 
 ### Installation
 
 ```sh
 pip install re-gpt
 ```
+
 ## Usage
 
 ### Basic example
@@ -109,6 +109,7 @@ with SyncChatGPT(session_token=session_token) as chatgpt:
 ```
 
 ### Basic async example
+
 ```python
 import asyncio
 import sys
@@ -152,10 +153,10 @@ For a more complex example, check out the [examples](/examples) folder in the re
 
 ## TODO
 
-* [x] Add more examples
-* [ ] Add better error handling
-* [ ] Implement a function to retrieve all ChatGPT chats
-* [ ] Improve documentation
+- [x] Add more examples
+- [ ] Add better error handling
+- [x] Implement a function to retrieve all ChatGPT chats
+- [ ] Improve documentation
 
 ## Contributing
 
@@ -172,8 +173,7 @@ Don't forget to give the project a star! Thanks again!
 
 ## License
 
-Distributed under the Apache License 2.0. See [`LICENSE`](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/LICENSE
-) for more information.
+Distributed under the Apache License 2.0. See [`LICENSE`](https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/LICENSE) for more information.
 
 ## Contact/Bug report
 
@@ -183,19 +183,20 @@ Repo Link: <https://github.com/Zai-Kun/reverse-engineered-chatgpt>
 
 ## Acknowledgments
 
-* [sudoAlphaX](https://github.com/sudoAlphaX)
+- [sudoAlphaX](https://github.com/sudoAlphaX)
 
-* [yifeikong (curl-cffi module)](https://github.com/yifeikong/curl_cffi)
+- [yifeikong (curl-cffi module)](https://github.com/yifeikong/curl_cffi)
 
-* [acheong08 (implementation to obtain arkose_token)](https://github.com/acheong08/funcaptcha)
+- [acheong08 (implementation to obtain arkose_token)](https://github.com/acheong08/funcaptcha)
 
-* [pyca (cryptography module)](https://github.com/pyca/cryptography/)
+- [pyca (cryptography module)](https://github.com/pyca/cryptography/)
 
-* [Legrandin (pycryptodome module)](https://github.com/Legrandin/pycryptodome/)
+- [Legrandin (pycryptodome module)](https://github.com/Legrandin/pycryptodome/)
 
-* [othneildrew (README Template)](https://github.com/othneildrew)
+- [othneildrew (README Template)](https://github.com/othneildrew)
 
 <!-- MARKDOWN LINKS & IMAGES -->
+
 [forks-badge]: https://img.shields.io/github/forks/Zai-Kun/reverse-engineered-chatgpt
 [forks-url]: https://github.com/Zai-Kun/reverse-engineered-chatgpt/network/members
 [stars-badge]: https://img.shields.io/github/stars/Zai-Kun/reverse-engineered-chatgpt

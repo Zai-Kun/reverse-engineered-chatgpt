@@ -5,7 +5,7 @@ import json
 import uuid
 from typing import AsyncGenerator, Callable, Optional
 
-from curl_cffi.requests import AsyncSession
+from curl_cffi.requests import AsyncSession, Response
 
 from .errors import (
     BackendError,
@@ -447,7 +447,7 @@ class AsyncChatGPT:
         about_user: Optional[str] = "",
         about_model: Optional[str] = "",
         enable_for_new_chats: Optional[bool] = True,
-    ):
+    ) -> dict:
         """
         Set cuteom instructions for ChatGPT.
 
@@ -466,6 +466,21 @@ class AsyncChatGPT:
         url = CHATGPT_API.format("user_system_messages")
         response = await self.session.post(
             url=url, headers=self.build_request_headers(), json=data
+        )
+
+        return response.json()
+
+    async def retrieve_chats(
+        self, offset: Optional[int] = 0, limit: Optional[int] = 28
+    ) -> dict:
+        params = {
+            "offset": offset,
+            "limit": limit,
+            "order": "updated",
+        }
+        url = CHATGPT_API.format("conversations")
+        response = await self.session.get(
+            url=url, params=params, headers=self.build_request_headers()
         )
 
         return response.json()
