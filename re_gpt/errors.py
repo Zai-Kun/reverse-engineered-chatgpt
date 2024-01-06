@@ -32,3 +32,11 @@ class UnexpectedResponseError(Exception):
         self.server_response = server_response
         self.message = f"An unexpected error occurred. Error message: {self.original_exception}.\nThis is what the server returned: {self.server_response}."
         super().__init__(self.message)
+
+
+class InvalidModelName(Exception):
+    def __init__(self, model, avalible_models):
+        self.model = model
+        self.avalible_models = avalible_models
+        self.message = f'"{model}" is not a valid model. Avalible models: {[model for model in avalible_models]}'
+        super().__init__(self.message)

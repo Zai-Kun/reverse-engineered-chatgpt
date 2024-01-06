@@ -126,3 +126,11 @@ def sync_get_binary_path(session):
         sync_download_binary(session, binary_path, file_url)
 
     return binary_path
+
+
+def get_model_slug(chat):
+    for _, message in chat.get("mapping", {}).items():
+        if "message" in message:
+            role = message["message"]["author"]["role"]
+            if role == "assistant":
+                return message["message"]["metadata"]["model_slug"]
