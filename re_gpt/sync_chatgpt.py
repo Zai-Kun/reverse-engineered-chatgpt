@@ -1,6 +1,5 @@
 import ctypes
 import inspect
-import json
 import time
 import uuid
 from queue import Queue
@@ -15,6 +14,7 @@ from .async_chatgpt import (
     USER_AGENT,
     AsyncChatGPT,
     AsyncConversation,
+    MODELS,
 )
 from .errors import (
     BackendError,
@@ -22,13 +22,14 @@ from .errors import (
     RetryError,
     TokenNotProvided,
     UnexpectedResponseError,
+    InvalidModelName,
 )
-from .utils import sync_get_binary_path
+from .utils import sync_get_binary_path, get_model_slug
 
 
 class SyncConversation(AsyncConversation):
-    def __init__(self, chatgpt, conversation_id: Optional[str] = None):
-        super().__init__(chatgpt, conversation_id)
+    def __init__(self, chatgpt, conversation_id: Optional[str] = None, model=None):
+        super().__init__(chatgpt, conversation_id, model)
 
     def fetch_chat(self) -> dict:
         """
@@ -52,6 +53,10 @@ class SyncConversation(AsyncConversation):
         try:
             chat = response.json()
             self.parent_id = list(chat.get("mapping", {}))[-1]
+            model_slug = get_model_slug(chat)
+            self.model = [
+                key for key, value in MODELS.items() if value["slug"] == model_slug
+            ][0]
         except Exception as e:
             error = e
         if error is not None:
@@ -169,7 +174,7 @@ class SyncConversation(AsyncConversation):
         Returns:
             dict: Payload containing message information.
         """
-        if self.conversation_id and self.parent_id is None:
+        if self.conversation_id and (self.parent_id is None or self.model is None):
             self.fetch_chat()  # it will automatically fetch the chat and set the parent id
 
         payload = {
@@ -178,6 +183,7 @@ class SyncConversation(AsyncConversation):
             "action": "next",
             "arkose_token": self.arkose_token_generator()
             if self.chatgpt.generate_arkose_token
+            or MODELS[self.model]["needs_arkose_token"]
             else None,
             "force_paragen": False,
             "history_and_training_disabled": False,
@@ -189,7 +195,7 @@ class SyncConversation(AsyncConversation):
                     "metadata": {},
                 }
             ],
-            "model": "text-davinci-002-render-sha",
+            "model": MODELS[self.model]["slug"],
             "parent_message_id": str(uuid.uuid4())
             if not self.parent_id
             else self.parent_id,
@@ -209,11 +215,12 @@ class SyncConversation(AsyncConversation):
             "action": "continue",
             "arkose_token": self.arkose_token_generator()
             if self.chatgpt.generate_arkose_token
+            or MODELS[self.model]["needs_arkose_token"]
             else None,
             "conversation_id": self.conversation_id,
             "force_paragen": False,
             "history_and_training_disabled": False,
-            "model": "text-davinci-002-render-sha",
+            "model": MODELS[self.model]["slug"],
             "parent_message_id": self.parent_id,
             "timezone_offset_min": -300,
         }
@@ -331,8 +338,12 @@ class SyncChatGPT(AsyncChatGPT):
 
         return SyncConversation(self, conversation_id)
 
-    def create_new_conversation(self) -> SyncConversation:
-        return SyncConversation(self)
+    def create_new_conversation(
+        self, model: Optional[str] = "gpt-3.5"
+    ) -> SyncConversation:
+        if model not in MODELS:
+            raise InvalidModelName(model, MODELS)
+        return SyncConversation(self, model=model)
 
     def delete_conversation(self, conversation_id: str) -> dict:
         """
