@@ -18,6 +18,7 @@
     <a href="https://github.com/Zai-Kun/reverse-engineered-chatgpt/issues">Report Bug</a>
     |
     <a href="https://github.com/Zai-Kun/reverse-engineered-chatgpt/discussions">Request Feature</a>
+      <a href="https://github.com/Zai-Kun/reverse-engineered-chatgpt/blob/main/docs/Zh_README.md">中文</a>
   </p>
 </div>
 
