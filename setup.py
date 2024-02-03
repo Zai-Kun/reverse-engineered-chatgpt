@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="re_gpt",
-    version="3.0.1",
+    version="3.0.2",
     author="Zai-Kun",
     description="Unofficial reverse-engineered ChatGPT API in Python.",
     long_description=open("README.md").read(),
