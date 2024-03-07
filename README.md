@@ -183,7 +183,7 @@ Repo Link: <https://github.com/Zai-Kun/reverse-engineered-chatgpt>
 
 ## Acknowledgments
 
-- [sudoAlphaX](https://github.com/sudoAlphaX)
+- [sudoAlphaX (for writing this readme)](https://github.com/sudoAlphaX)
 
 - [yifeikong (curl-cffi module)](https://github.com/yifeikong/curl_cffi)
 
