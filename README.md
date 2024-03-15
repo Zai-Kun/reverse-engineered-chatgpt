@@ -12,6 +12,8 @@
 [![Issues][issues-badge]][issues-url]
 [![MIT License][license-badge]][license-url]
 
+  English | [简体中文](./docs/zh-README.md)
+
   </p>
     <p align="center">
     <a href="https://github.com/Zai-Kun/reverse-engineered-chatgpt"></a>
