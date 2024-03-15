@@ -1,1 +1,2 @@
 curl_cffi==0.5.9
+websockets==12.0

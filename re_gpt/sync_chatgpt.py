@@ -2,6 +2,11 @@ import ctypes
 import inspect
 import time
 import uuid
+import websockets
+from websockets.exceptions import ConnectionClosed
+import json
+import base64
+import asyncio
 from queue import Queue
 from threading import Thread
 from typing import Callable, Generator, Optional
@@ -15,6 +20,7 @@ from .async_chatgpt import (
     AsyncChatGPT,
     AsyncConversation,
     MODELS,
+    WS_REGISTER_URL,
 )
 from .errors import (
     BackendError,
@@ -90,9 +96,9 @@ class SyncConversation(AsyncConversation):
         try:
             full_message = None
             while True:
-                response = self.send_message(payload=payload)
+                response = self.send_message(payload=payload) if not self.chatgpt.websocket_mode else self.send_websocket_message(payload=payload)
                 for chunk in response:
-                    decoded_chunk = chunk.decode()
+                    decoded_chunk = chunk.decode() if not self.chatgpt.websocket_mode else chunk
 
                     server_response += decoded_chunk
                     for line in decoded_chunk.splitlines():
@@ -166,6 +172,45 @@ class SyncConversation(AsyncConversation):
             if chunk is None:
                 break
             yield chunk
+    
+    def send_websocket_message(self, payload: dict) -> Generator[str, None, None]:
+        """
+        Send a message payload via WebSocket and receive the response.
+
+        Args:
+            payload (dict): Payload containing message information.
+
+        Yields:
+            str: Chunk of data received as a response.
+        """
+
+        response_queue = Queue()
+        websocket_request_id = None
+
+        def perform_request():
+            nonlocal websocket_request_id
+            
+            url = CHATGPT_API.format("conversation")
+            response = (self.chatgpt.session.post(
+                url=url,
+                headers=self.chatgpt.build_request_headers(),
+                json=payload,
+            )).json()
+
+            websocket_request_id = response.get("websocket_request_id")
+            
+            if websocket_request_id not in self.chatgpt.ws_conversation_map:
+                self.chatgpt.ws_conversation_map[websocket_request_id] = response_queue
+            
+        Thread(target=perform_request).start()
+
+        while True:
+            chunk = response_queue.get()
+            if chunk is None:
+                break
+            yield chunk
+
+        del self.chatgpt.ws_conversation_map[websocket_request_id]
 
     def build_message_payload(self, user_input: str) -> dict:
         """
@@ -279,6 +324,7 @@ class SyncChatGPT(AsyncChatGPT):
         session_token: Optional[str] = None,
         exit_callback_function: Optional[Callable] = None,
         auth_token: Optional[str] = None,
+        websocket_mode: Optional[bool] = False,
     ):
         """
         Initializes an instance of the class.
@@ -288,13 +334,18 @@ class SyncChatGPT(AsyncChatGPT):
             session_token (Optional[str]): A session token. Defaults to None.
             exit_callback_function (Optional[callable]): A function to be called on exit. Defaults to None.
             auth_token (Optional[str]): An authentication token. Defaults to None.
+            websocket_mode (Optional[bool]): Toggle whether to use WebSocket for chat. Defaults to False.
         """
         super().__init__(
             proxies=proxies,
             session_token=session_token,
             exit_callback_function=exit_callback_function,
             auth_token=auth_token,
+            websocket_mode=websocket_mode,
         )
+
+        self.stop_websocket_flag = False
+        self.stop_websocket = None
 
     def __enter__(self):
         self.session = Session(
@@ -314,6 +365,17 @@ class SyncChatGPT(AsyncChatGPT):
             if self.session_token is None:
                 raise TokenNotProvided
             self.auth_token = self.fetch_auth_token()
+            
+        # automaticly check the status of websocket_mode
+        if not self.websocket_mode:
+            self.websocket_mode = self.check_websocket_availability()
+            print(f"WebSocket mode is {'enabled' if self.websocket_mode else 'disabled'}")
+            
+        if self.websocket_mode:
+            def run_websocket():
+                asyncio.run(self.ensure_websocket())
+            self.ws_loop = Thread(target=run_websocket)
+            self.ws_loop.start()
 
         return self
 
@@ -324,6 +386,10 @@ class SyncChatGPT(AsyncChatGPT):
                     self.exit_callback_function(self)
         finally:
             self.session.close()
+
+        if self.websocket_mode:
+            self.stop_websocket_flag = True
+            self.ws_loop.join()
 
     def get_conversation(self, conversation_id: str) -> SyncConversation:
         """
@@ -442,3 +508,61 @@ class SyncChatGPT(AsyncChatGPT):
         )
 
         return response.json()
+    
+    def check_websocket_availability(self) -> bool:
+        """
+        Check if WebSocket is available.
+
+        Returns:
+            bool: True if WebSocket is available, otherwise False.
+        """
+        url = CHATGPT_API.format("accounts/check/v4-2023-04-27")
+        response = (self.session.get(
+            url=url, headers=self.build_request_headers()
+        )).json()
+        
+        if 'account_ordering' in response and 'accounts' in response:
+            account_id = response['account_ordering'][0]
+            if account_id in response['accounts']:
+                return 'shared_websocket' in response['accounts'][account_id]['features']
+
+        return False
+    
+    async def ensure_websocket(self):
+        ws_url_rsp = self.session.post(WS_REGISTER_URL, headers=self.build_request_headers()).json()
+        ws_url = ws_url_rsp['wss_url']
+        access_token = self.extract_access_token(ws_url)
+        asyncio.create_task(self.ensure_close_websocket())
+        await self.listen_to_websocket(ws_url, access_token)
+        
+    async def ensure_close_websocket(self):
+        while True:
+            if self.stop_websocket_flag:
+                break
+            await asyncio.sleep(1)
+        await self.stop_websocket()
+
+    async def listen_to_websocket(self, ws_url: str, access_token: str):
+        headers = {'Authorization': f'Bearer {access_token}'}
+        async with websockets.connect(ws_url, extra_headers=headers) as websocket:
+            async def stop_websocket():
+                await websocket.close()
+            self.stop_websocket = stop_websocket
+
+            while True:
+                message = None
+                try:
+                    message = await websocket.recv()
+                except ConnectionClosed:
+                    break
+                message_data = json.loads(message)
+                body_encoded = message_data.get("body", "")
+                ws_id = message_data.get("websocket_request_id", "")
+                decoded_body = base64.b64decode(body_encoded).decode('utf-8')
+                response_queue = self.ws_conversation_map.get(ws_id)
+                if response_queue is None:
+                    continue
+                response_queue.put_nowait(decoded_body)
+                if '[DONE]' in decoded_body or '[ERROR]' in decoded_body:
+                    response_queue.put(None)
+                    continue
