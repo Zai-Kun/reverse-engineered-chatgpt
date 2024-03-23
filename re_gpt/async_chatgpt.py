@@ -3,6 +3,9 @@ import ctypes
 import inspect
 import json
 import uuid
+import re
+import websockets
+import base64
 from typing import AsyncGenerator, Callable, Optional
 
 from curl_cffi.requests import AsyncSession
@@ -20,6 +23,8 @@ from .utils import async_get_binary_path, get_model_slug
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
 CHATGPT_API = "https://chat.openai.com/backend-api/{}"
 BACKUP_ARKOSE_TOKEN_GENERATOR = "https://arkose-token-generator.zaieem.repl.co/token"
+WS_REGISTER_URL = CHATGPT_API.format("register-websocket")
+
 MODELS = {
     "gpt-4": {"slug": "gpt-4", "needs_arkose_token": True},
     "gpt-3.5": {"slug": "text-davinci-002-render-sha", "needs_arkose_token": False},
@@ -92,10 +97,10 @@ class AsyncConversation:
         try:
             full_message = None
             while True:
-                response = self.send_message(payload=payload)
+                response = self.send_message(payload=payload) if not self.chatgpt.websocket_mode else self.send_websocket_message(payload=payload)
                 async for chunk in response:
-                    decoded_chunk = chunk.decode()
-
+                    decoded_chunk = chunk.decode() if isinstance(chunk, bytes) else chunk
+                    
                     server_response += decoded_chunk
                     for line in decoded_chunk.splitlines():
                         if not line.startswith("data: "):
@@ -168,6 +173,47 @@ class AsyncConversation:
             if chunk is None:
                 break
             yield chunk
+    
+    async def send_websocket_message(self, payload: dict) -> AsyncGenerator[str, None]:
+        """
+        Send a message payload via WebSocket and receive the response.
+
+        Args:
+            payload (dict): Payload containing message information.
+
+        Yields:
+            str: Chunk of data received as a response.
+        """
+        await self.chatgpt.ensure_websocket()
+
+        response_queue = asyncio.Queue()
+        websocket_request_id = None
+
+        async def perform_request():
+            nonlocal websocket_request_id
+            
+            url = CHATGPT_API.format("conversation")
+            response = (await self.chatgpt.session.post(
+                url=url,
+                headers=self.chatgpt.build_request_headers(),
+                json=payload,
+            )).json()
+
+            websocket_request_id = response.get("websocket_request_id")
+            
+            if websocket_request_id not in self.chatgpt.ws_conversation_map:
+                self.chatgpt.ws_conversation_map[websocket_request_id] = response_queue
+            
+        asyncio.create_task(perform_request())
+
+        while True:
+            chunk = await response_queue.get()
+            if chunk is None:
+                break
+            yield chunk
+
+        del self.chatgpt.ws_conversation_map[websocket_request_id]
+    
 
     async def build_message_payload(self, user_input: str) -> dict:
         """
@@ -201,6 +247,9 @@ class AsyncConversation:
             "parent_message_id": str(uuid.uuid4())
             if not self.parent_id
             else self.parent_id,
+            "websocket_request_id": str(uuid.uuid4())
+            if self.chatgpt.websocket_mode
+            else None,
         }
 
         return payload
@@ -310,6 +359,7 @@ class AsyncChatGPT:
         exit_callback_function: Optional[Callable] = None,
         auth_token: Optional[str] = None,
         generate_arkose_token: Optional[bool] = False,
+        websocket_mode: Optional[bool] = False,
     ):
         """
         Initializes an instance of the class.
@@ -320,6 +370,7 @@ class AsyncChatGPT:
             exit_callback_function (Optional[callable]): A function to be called on exit. Defaults to None.
             auth_token (Optional[str]): An authentication token. Defaults to None.
             generate_arkose_token (Optional[bool]): Toggle whether to generate and send arkose-token in the payload. Defaults to False.
+            websocket_mode (Optional[bool]): Toggle whether to use WebSocket for chat. Defaults to False.
         """
         self.proxies = proxies
         self.exit_callback_function = exit_callback_function
@@ -332,6 +383,10 @@ class AsyncChatGPT:
         self.session_token = session_token
         self.auth_token = auth_token
         self.session = None
+        
+        self.websocket_mode = websocket_mode
+        self.ws_loop = None
+        self.ws_conversation_map = {}
 
     async def __aenter__(self):
         self.session = AsyncSession(
@@ -350,6 +405,12 @@ class AsyncChatGPT:
             if self.session_token is None:
                 raise TokenNotProvided
             self.auth_token = await self.fetch_auth_token()
+
+        if not self.websocket_mode:
+           self.websocket_mode = await self.check_websocket_availability()
+
+        if self.websocket_mode:
+            await self.ensure_websocket()
 
         return self
 
@@ -499,3 +560,53 @@ class AsyncChatGPT:
         )
 
         return response.json()
+
+    async def check_websocket_availability(self) -> bool:
+        """
+        Check if WebSocket is available.
+
+        Returns:
+            bool: True if WebSocket is available, otherwise False.
+        """
+        url = CHATGPT_API.format("accounts/check/v4-2023-04-27")
+        response = (await self.session.get(
+            url=url, headers=self.build_request_headers()
+        )).json()
+        
+        if 'account_ordering' in response and 'accounts' in response:
+            account_id = response['account_ordering'][0]
+            if account_id in response['accounts']:
+                return 'shared_websocket' in response['accounts'][account_id]['features']
+
+        return False
+    
+    async def ensure_websocket(self):
+        if not self.ws_loop:
+            ws_url_rsp = (await self.session.post(WS_REGISTER_URL, headers=self.build_request_headers())).json()
+            ws_url = ws_url_rsp['wss_url']
+            access_token = self.extract_access_token(ws_url)
+            self.ws_loop = asyncio.create_task(self.listen_to_websocket(ws_url, access_token))
+
+    def extract_access_token(self, url):
+        match = re.search(r'access_token=([^&]*)', url)
+        if match:
+            return match.group(1)
+        else:
+            return None
+        
+    async def listen_to_websocket(self, ws_url: str, access_token: str):
+        headers = {'Authorization': f'Bearer {access_token}'}
+        async with websockets.connect(ws_url, extra_headers=headers) as websocket:
+            while True:
+                message = await websocket.recv()
+                message_data = json.loads(message)
+                body_encoded = message_data.get("body", "")
+                ws_id = message_data.get("websocket_request_id", "")
+                decoded_body = base64.b64decode(body_encoded).decode('utf-8')
+                response_queue = self.ws_conversation_map.get(ws_id)
+                if response_queue is None:
+                    continue
+                response_queue.put_nowait(decoded_body)
+                if '[DONE]' in decoded_body or '[ERROR]' in decoded_body:
+                    await response_queue.put(None)
+                    continue

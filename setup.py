@@ -12,5 +12,8 @@ setup(
         "Bug Tracker": "https://github.com/Zai-Kun/reverse-engineered-chatgpt/issues",
     },
     packages=find_packages(),
-    install_requires=["curl_cffi==0.5.9"],
+    install_requires=[
+        "curl_cffi==0.5.9",
+        "websockets==12.0"
+    ],
 )
