@@ -158,9 +158,16 @@ class AsyncConversation:
                 response_queue.put_nowait(chunk)
 
             url = CHATGPT_API.format("conversation")
+            
+            headers = self.chatgpt.build_request_headers()
+            # Add Chat Requirements Token
+            chat_requriments_token = await self.chatgpt.create_chat_requirements_token()
+            if chat_requriments_token:
+                headers["openai-sentinel-chat-requirements-token"] = chat_requriments_token
+
             await self.chatgpt.session.post(
                 url=url,
-                headers=self.chatgpt.build_request_headers(),
+                headers=headers,
                 json=payload,
                 content_callback=content_callback,
             )
@@ -193,13 +200,22 @@ class AsyncConversation:
             nonlocal websocket_request_id
             
             url = CHATGPT_API.format("conversation")
+            headers = self.chatgpt.build_request_headers()
+            # Add Chat Requirements Token
+            chat_requriments_token = await self.chatgpt.create_chat_requirements_token()
+            if chat_requriments_token:
+                headers["openai-sentinel-chat-requirements-token"] = chat_requriments_token
+
             response = (await self.chatgpt.session.post(
                 url=url,
-                headers=self.chatgpt.build_request_headers(),
+                headers=headers,
                 json=payload,
             )).json()
 
             websocket_request_id = response.get("websocket_request_id")
+            
+            if websocket_request_id is None:
+                raise UnexpectedResponseError("WebSocket request ID not found in response", response)
             
             if websocket_request_id not in self.chatgpt.ws_conversation_map:
                 self.chatgpt.ws_conversation_map[websocket_request_id] = response_queue
@@ -420,7 +436,7 @@ class AsyncChatGPT:
                 if not inspect.iscoroutinefunction(self.exit_callback_function):
                     self.exit_callback_function(self)
         finally:
-            self.session.close()
+            await self.session.close()
 
     def build_request_headers(self) -> dict:
         """
@@ -606,7 +622,25 @@ class AsyncChatGPT:
                 response_queue = self.ws_conversation_map.get(ws_id)
                 if response_queue is None:
                     continue
+                if 'title_generation' in decoded_body:
+                    # skip
+                    continue
                 response_queue.put_nowait(decoded_body)
                 if '[DONE]' in decoded_body or '[ERROR]' in decoded_body:
                     await response_queue.put(None)
                     continue
+
+    async def create_chat_requirements_token(self):
+        """
+        Get a chat requirements token from chatgpt server
+
+        Returns:
+            str: chat requirements token
+        """
+        url = CHATGPT_API.format("sentinel/chat-requirements")
+        response = await self.session.post(
+            url=url, headers=self.build_request_headers()
+        )
+        body = response.json()
+        token = body.get("token", None)
+        return token
