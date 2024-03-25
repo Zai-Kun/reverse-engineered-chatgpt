@@ -157,9 +157,15 @@ class SyncConversation(AsyncConversation):
                 response_queue.put(chunk)
 
             url = CHATGPT_API.format("conversation")
+            headers = self.chatgpt.build_request_headers()
+            # Add Chat Requirements Token
+            chat_requriments_token = self.chatgpt.create_chat_requirements_token()
+            if chat_requriments_token:
+                headers["openai-sentinel-chat-requirements-token"] = chat_requriments_token
+
             response = self.chatgpt.session.post(
                 url=url,
-                headers=self.chatgpt.build_request_headers(),
+                headers=headers,
                 json=payload,
                 content_callback=content_callback,
             )
@@ -191,14 +197,23 @@ class SyncConversation(AsyncConversation):
             nonlocal websocket_request_id
             
             url = CHATGPT_API.format("conversation")
+            headers = self.chatgpt.build_request_headers()
+            # Add Chat Requirements Token
+            chat_requriments_token = self.chatgpt.create_chat_requirements_token()
+            if chat_requriments_token:
+                headers["openai-sentinel-chat-requirements-token"] = chat_requriments_token
+
             response = (self.chatgpt.session.post(
                 url=url,
-                headers=self.chatgpt.build_request_headers(),
+                headers=headers,
                 json=payload,
             )).json()
 
             websocket_request_id = response.get("websocket_request_id")
             
+            if websocket_request_id is None:
+                raise UnexpectedResponseError("WebSocket request ID not found in response", response)
+
             if websocket_request_id not in self.chatgpt.ws_conversation_map:
                 self.chatgpt.ws_conversation_map[websocket_request_id] = response_queue
             
@@ -244,6 +259,9 @@ class SyncConversation(AsyncConversation):
             "parent_message_id": str(uuid.uuid4())
             if not self.parent_id
             else self.parent_id,
+            "websocket_request_id": str(uuid.uuid4())
+            if self.chatgpt.websocket_mode
+            else None,
         }
 
         return payload
@@ -369,7 +387,6 @@ class SyncChatGPT(AsyncChatGPT):
         # automaticly check the status of websocket_mode
         if not self.websocket_mode:
             self.websocket_mode = self.check_websocket_availability()
-            print(f"WebSocket mode is {'enabled' if self.websocket_mode else 'disabled'}")
             
         if self.websocket_mode:
             def run_websocket():
@@ -566,3 +583,18 @@ class SyncChatGPT(AsyncChatGPT):
                 if '[DONE]' in decoded_body or '[ERROR]' in decoded_body:
                     response_queue.put(None)
                     continue
+
+    def create_chat_requirements_token(self):
+        """
+        Get a chat requirements token from chatgpt server
+
+        Returns:
+            str: chat requirements token
+        """
+        url = CHATGPT_API.format("sentinel/chat-requirements")
+        response = self.session.post(
+            url=url, headers=self.build_request_headers()
+        )
+        body = response.json()
+        token = body.get("token", None)
+        return token
